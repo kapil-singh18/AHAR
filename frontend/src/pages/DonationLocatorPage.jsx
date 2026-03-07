@@ -35,6 +35,7 @@ function DonationLocatorPage() {
   const [radiusKm, setRadiusKm] = useState(10);
   const [currentPosition, setCurrentPosition] = useState(null);
   const [ngos, setNgos] = useState([]);
+  const [resultMode, setResultMode] = useState('nearby');
   const [status, setStatus] = useState('Waiting for location...');
   const [error, setError] = useState('');
 
@@ -63,14 +64,25 @@ function DonationLocatorPage() {
 
   useEffect(() => {
     const fetchNearbyNgos = async () => {
-      if (!currentPosition) return;
-
       try {
-        const [lat, lng] = currentPosition;
-        const response = await api.get('/donations/nearby-ngos', {
-          params: { lat, lng, radiusKm, kitchenId }
-        });
-        setNgos(response.data.data.ngos || []);
+        if (currentPosition) {
+          const [lat, lng] = currentPosition;
+          const response = await api.get('/donations/nearby-ngos', {
+            params: { lat, lng, radiusKm, kitchenId }
+          });
+          const nearby = response.data.data.ngos || [];
+
+          if (nearby.length > 0) {
+            setNgos(nearby);
+            setResultMode('nearby');
+            return;
+          }
+        }
+
+        const allResponse = await api.get('/donations/ngos', { params: { kitchenId } });
+        const allNgos = allResponse.data.data || [];
+        setNgos(allNgos);
+        setResultMode('all');
       } catch (err) {
         setError(err.response?.data?.message || 'Failed to load nearby NGOs');
       }
@@ -111,6 +123,11 @@ function DonationLocatorPage() {
       <Card title="Live Location Status">
         <Alert tone="info">{status}</Alert>
         {error && <Alert tone="error" ariaLive="assertive">{error}</Alert>}
+        {!error && resultMode === 'all' && (
+          <Alert tone="info">
+            No NGO found inside current radius from your live location. Showing all NGOs for this Kitchen ID.
+          </Alert>
+        )}
       </Card>
 
       <Card title="Map View">
@@ -137,8 +154,12 @@ function DonationLocatorPage() {
                   <br />
                   {ngo.address}
                   <br />
-                  Distance: {ngo.distanceKm} km
-                  <br />
+                  {typeof ngo.distanceKm === 'number' && (
+                    <>
+                      Distance: {ngo.distanceKm} km
+                      <br />
+                    </>
+                  )}
                   Phone: {ngo.phone}
                   <br />
                   Hours: {ngo.operatingHours}
@@ -157,7 +178,11 @@ function DonationLocatorPage() {
           <div className="row" key={ngo._id}>
             <strong>{ngo.name}</strong>
             <span>{ngo.phone}</span>
-            <Badge tone="success">{ngo.distanceKm} km away</Badge>
+            {typeof ngo.distanceKm === 'number' ? (
+              <Badge tone="success">{ngo.distanceKm} km away</Badge>
+            ) : (
+              <Badge tone="neutral">Outside current radius</Badge>
+            )}
           </div>
         ))}
       </Card>

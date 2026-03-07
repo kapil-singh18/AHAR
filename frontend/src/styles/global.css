@@ -93,7 +93,7 @@ a {
   top: 0;
   z-index: 60;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: var(--space-4);
   padding: 0.95rem clamp(0.9rem, 2vw, 1.5rem);
@@ -121,15 +121,18 @@ a {
 .nav-links {
   display: flex;
   align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
+  justify-content: flex-start;
+  flex-wrap: nowrap;
   gap: 0.45rem;
+  overflow-x: auto;
+  scrollbar-width: thin;
 }
 
 .nav-link {
   display: flex;
   align-items: center;
   justify-content: center;
+  width: auto;
   gap: var(--space-3);
   color: var(--text-subtle);
   text-decoration: none;
@@ -160,12 +163,6 @@ a {
   border-color: color-mix(in srgb, var(--accent) 38%, var(--border));
   color: var(--text);
   box-shadow: 0 6px 16px rgba(41, 67, 48, 0.12);
-}
-
-.ribbon-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
 }
 
 .layout-main {
@@ -506,10 +503,6 @@ body[data-theme='eco-dark'] .alert-info {
 
   .nav-ribbon .nav-link {
     flex: 0 0 auto;
-  }
-
-  .ribbon-actions {
-    justify-content: flex-start;
   }
 
   .content {

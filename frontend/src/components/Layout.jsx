@@ -1,21 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import Button from './ui/Button';
+import { useLanguage } from '../i18n';
 
 const navItems = [
   { path: '/', label: 'Impact Dashboard' },
-  { path: '/menu', label: 'Mindful Menu' },
-  { path: '/inventory', label: 'Inventory Health' },
-  { path: '/analytics', label: 'Waste Analytics' },
-  { path: '/consumption', label: 'Daily Consumption' },
-  { path: '/expiry', label: 'Expiry Scan' },
-  { path: '/donations', label: 'Community Donations' },
-  { path: '/recommendations', label: 'Dish Suggestions' }
+  { path: '/inventory', label: 'Inventory Hub' },
+  { path: '/inventory/donations', label: 'Donation Locator' },
+  { path: '/inventory/recommendations', label: 'Dish of the Day' },
+  { path: '/guide', label: 'Guide' }
 ];
 
 function Layout({ children }) {
   const location = useLocation();
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'eco-light');
+  const { language, setLanguage, t } = useLanguage();
 
   useEffect(() => {
     document.body.setAttribute('data-theme', theme === 'eco-dark' ? 'eco-dark' : 'eco-light');
@@ -26,31 +25,39 @@ function Layout({ children }) {
     <div className="app-shell">
       <header className="top-ribbon" aria-label="Primary">
         <div className="ribbon-brand">
-          <h1>AHAR</h1>
-          <p>Ai based hospitality and resource optimizer</p>
+          <h1>{t('AHAR')}</h1>
+          <p>{t('Ai based hospitality and resource optimizer')}</p>
         </div>
         <nav className="nav-links nav-ribbon">
           {navItems.map((item) => (
             <Link
               key={item.path}
               to={item.path}
-              className={`nav-link ${location.pathname === item.path ? 'active' : ''}`.trim()}
-              aria-current={location.pathname === item.path ? 'page' : undefined}
+              className={`nav-link ${item.path === '/' ? location.pathname === '/' : location.pathname.startsWith(item.path) ? 'active' : ''}`.trim()}
+              aria-current={item.path === '/' ? location.pathname === '/' ? 'page' : undefined : location.pathname.startsWith(item.path) ? 'page' : undefined}
             >
-              {item.label}
+              {t(item.label)}
             </Link>
           ))}
-        </nav>
-        <div className="ribbon-actions">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => setLanguage(language === 'hi' ? 'en' : 'hi')}
+            aria-label="Toggle app language"
+            className="nav-link"
+          >
+            {language === 'hi' ? t('English') : t('Hindi')}
+          </Button>
           <Button
             type="button"
             variant="secondary"
             onClick={() => setTheme((prev) => (prev === 'eco-dark' ? 'eco-light' : 'eco-dark'))}
             aria-label="Toggle eco dark mode"
+            className="nav-link"
           >
-            {theme === 'eco-dark' ? 'Light Theme' : 'Dark Theme'}
+            {theme === 'eco-dark' ? t('Light Theme') : t('Dark Theme')}
           </Button>
-        </div>
+        </nav>
       </header>
       <div className="layout-main">
         <main className="content">{children}</main>

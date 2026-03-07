@@ -6,8 +6,10 @@ import Card from '../components/ui/Card';
 import Field from '../components/ui/Field';
 import PageHeader from '../components/ui/PageHeader';
 import Badge from '../components/ui/Badge';
+import { useLanguage } from '../i18n';
 
 function RecommendationsPage() {
+  const { t } = useLanguage();
   const [form, setForm] = useState({
     kitchenId: 'kitchen-nyc-001',
     topK: 5,
@@ -91,7 +93,7 @@ function RecommendationsPage() {
       {error && <Alert tone="error" ariaLive="assertive">{error}</Alert>}
 
       {result && (
-        <Card title={`Recommendations (${recs.length})`}>
+        <Card title={`${t('Recommendations')} (${recs.length})`}>
           {recs.length === 0 && <p className="empty-state">No recommendations matched your filters.</p>}
           {recs.map((rec) => (
             <div key={rec.dishName} className="row" style={{ alignItems: 'center', gap: 12 }}>
