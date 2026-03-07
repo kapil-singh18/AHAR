@@ -5,6 +5,25 @@ import PageHeader from '../components/ui/PageHeader';
 import StatChip from '../components/ui/StatChip';
 import Badge from '../components/ui/Badge';
 
+function toShortDate(dateLabel) {
+    const d = new Date(dateLabel);
+    if (Number.isNaN(d.getTime())) return String(dateLabel);
+    return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+}
+
+function getLinePath(values, width = 560, height = 200, padding = 20) {
+    const max = Math.max(...values, 1);
+    const stepX = values.length > 1 ? (width - padding * 2) / (values.length - 1) : 0;
+
+    return values
+        .map((value, idx) => {
+            const x = padding + idx * stepX;
+            const y = height - padding - ((value / max) * (height - padding * 2));
+            return `${idx === 0 ? 'M' : 'L'} ${x} ${y}`;
+        })
+        .join(' ');
+}
+
 function DashboardPage() {
     const [kitchenId] = useState('kitchen-nyc-001');
     const [stats, setStats] = useState({
@@ -15,8 +34,13 @@ function DashboardPage() {
         platesWasteReduction: 0,
         currentWaste: 10,
         previousWaste: 20,
-        mealPlatePrice: 50
+        mealPlatePrice: 50,
+        totalWaste: 0,
+        wasteReductionPercent: 0,
+        estimatedSavings: 0
     });
+    const [dailyWasteSeries, setDailyWasteSeries] = useState([]);
+    const [dishWasteSeries, setDishWasteSeries] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -34,6 +58,8 @@ function DashboardPage() {
 
             const dashboardData = dashboardRes.data?.data;
             const reportData = reportRes.data?.data;
+            const dailyWasteTotals = dashboardData?.dailyWasteTotals || [];
+            const dishWiseWaste = dashboardData?.dishWiseWaste || [];
 
             // Calculate waste reduction
             const previousWaste = 20; // Example: previous average waste
@@ -59,12 +85,56 @@ function DashboardPage() {
                 wasteReductionPercent: reportData?.wasteReductionPercent || 0,
                 estimatedSavings: reportData?.estimatedSavings || 0
             });
+
+            const seriesFromApi = dailyWasteTotals
+                .slice(-7)
+                .map((item) => ({
+                    label: toShortDate(item?._id?.date),
+                    value: Number(item?.totalLeftover || 0)
+                }));
+
+            const fallbackSeries = [
+                { label: 'Mon', value: 21 },
+                { label: 'Tue', value: 19 },
+                { label: 'Wed', value: 17 },
+                { label: 'Thu', value: 15 },
+                { label: 'Fri', value: 13 },
+                { label: 'Sat', value: 11 },
+                { label: 'Sun', value: 10 }
+            ];
+
+            setDailyWasteSeries(seriesFromApi.length > 0 ? seriesFromApi : fallbackSeries);
+
+            const topDishes = dishWiseWaste
+                .slice(0, 5)
+                .map((item) => ({
+                    label: item?.dishName || 'Unknown dish',
+                    value: Number(item?.totalLeftover || 0)
+                }));
+
+            const fallbackDishes = [
+                { label: 'Rice Bowl', value: 38 },
+                { label: 'Dal Curry', value: 29 },
+                { label: 'Paneer Dish', value: 23 },
+                { label: 'Roti', value: 19 },
+                { label: 'Salad', value: 15 }
+            ];
+
+            setDishWasteSeries(topDishes.length > 0 ? topDishes : fallbackDishes);
         } catch (error) {
             console.error('Error loading dashboard:', error);
         } finally {
             setLoading(false);
         }
     };
+
+    const improvementPercent = Number(((stats.dailyWasteReduction / stats.previousWaste) * 100).toFixed(1));
+    const ringPercent = Math.max(0, Math.min(100, improvementPercent));
+
+    const lineValues = dailyWasteSeries.map((item) => item.value);
+    const linePath = lineValues.length ? getLinePath(lineValues) : '';
+    const lineMax = Math.max(...lineValues, 1);
+    const barsMax = Math.max(...dishWasteSeries.map((item) => item.value), 1);
 
     return (
         <div className="stack">
@@ -73,6 +143,64 @@ function DashboardPage() {
                 title="Dashboard"
                 description="Track your food waste reduction impact, cost savings, and sustainability metrics in real-time."
             />
+
+            <div className="dashboard-visual-grid">
+                <Card title="7-Day Waste Trend">
+                    <div className="chart-wrap">
+                        <svg className="line-chart" viewBox="0 0 560 200" role="img" aria-label="Daily waste trend line chart">
+                            <line x1="20" y1="180" x2="540" y2="180" className="chart-axis" />
+                            <line x1="20" y1="20" x2="20" y2="180" className="chart-axis" />
+                            {linePath && <path d={linePath} className="chart-line" />}
+                            {dailyWasteSeries.map((point, index) => {
+                                const x = 20 + (dailyWasteSeries.length > 1 ? index * (520 / (dailyWasteSeries.length - 1)) : 0);
+                                const y = 180 - ((point.value / lineMax) * 160);
+                                return (
+                                    <g key={`${point.label}-${index}`}>
+                                        <circle cx={x} cy={y} r="4" className="chart-point" />
+                                        <text x={x} y="196" textAnchor="middle" className="chart-label">{point.label}</text>
+                                    </g>
+                                );
+                            })}
+                        </svg>
+                    </div>
+                    <p className="chart-caption">Lower line means less leftover food. Goal is steady downward trend.</p>
+                </Card>
+
+                <Card title="Waste Reduction Progress">
+                    <div className="progress-ring-wrap">
+                        <div
+                            className="progress-ring"
+                            style={{ background: `conic-gradient(var(--success) ${ringPercent}%, color-mix(in srgb, var(--surface-muted) 92%, transparent) 0)` }}
+                        >
+                            <div className="progress-ring-inner">
+                                <strong>{ringPercent}%</strong>
+                                <span>Improvement</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="progress-legend">
+                        <p>Old waste: <strong>{stats.previousWaste} plates/day</strong></p>
+                        <p>Now waste: <strong>{stats.currentWaste} plates/day</strong></p>
+                    </div>
+                </Card>
+            </div>
+
+            <Card title="Top Dish-Wise Waste (Plates)">
+                <div className="bar-chart">
+                    {dishWasteSeries.map((item, idx) => (
+                        <div className="bar-item" key={`${item.label}-${idx}`}>
+                            <div className="bar-track">
+                                <div
+                                    className="bar-fill"
+                                    style={{ height: `${Math.max(8, (item.value / barsMax) * 100)}%` }}
+                                />
+                            </div>
+                            <p className="bar-value">{item.value}</p>
+                            <p className="bar-label" title={item.label}>{item.label}</p>
+                        </div>
+                    ))}
+                </div>
+            </Card>
 
             <Card title="Waste Reduction Impact">
                 <div className="stats-grid">
@@ -113,7 +241,7 @@ function DashboardPage() {
                         label="Improvement"
                         value={
                             <Badge tone="success">
-                                {((stats.dailyWasteReduction / stats.previousWaste) * 100).toFixed(1)}% reduction
+                                {improvementPercent}% reduction
                             </Badge>
                         }
                     />
