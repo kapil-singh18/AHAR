@@ -20,20 +20,6 @@ function Dashboard() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
 
-  const [wasteForm, setWasteForm] = useState({
-    kitchenId: 'kitchen-nyc-001',
-    occupancyRate: 0.85,
-    temperatureC: 28,
-    prevDayMeals: 140,
-    prev7DayAvgMeals: 132,
-    mealsPrepared: 150,
-    weather: 'rain',
-    menuType: 'standard_veg',
-    facilityType: 'hostel'
-  });
-  const [wasteResult, setWasteResult] = useState(null);
-  const [wasteError, setWasteError] = useState('');
-
   const onChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
@@ -41,6 +27,7 @@ function Dashboard() {
   const submitPrediction = async (e) => {
     e.preventDefault();
     setError('');
+    setResult(null);
 
     try {
       const payload = {
@@ -59,39 +46,6 @@ function Dashboard() {
     }
   };
 
-  const onWasteChange = (e) => {
-    setWasteForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  };
-
-  const submitWastePrediction = async (e) => {
-    e.preventDefault();
-    setWasteError('');
-    setWasteResult(null);
-
-    try {
-      const payload = {
-        kitchenId: wasteForm.kitchenId,
-        occupancyRate: Number(wasteForm.occupancyRate),
-        temperatureC: Number(wasteForm.temperatureC),
-        prevDayMeals: Number(wasteForm.prevDayMeals),
-        prev7DayAvgMeals: Number(wasteForm.prev7DayAvgMeals),
-        mealsPrepared: Number(wasteForm.mealsPrepared),
-        weather: wasteForm.weather,
-        menuType: wasteForm.menuType,
-        facilityType: wasteForm.facilityType
-      };
-
-      const res = await api.post('/predict-waste', payload);
-      setWasteResult(res.data);
-    } catch (err) {
-      if (err.response?.status === 404) {
-        setWasteError('Waste prediction endpoint is missing on the deployed backend. Redeploy backend with POST /api/predict-waste.');
-      } else {
-        setWasteError(err.response?.data?.message || 'Waste prediction failed');
-      }
-    }
-  };
-
   return (
     <div className="stack">
       <PageHeader
@@ -100,25 +54,25 @@ function Dashboard() {
         description="Estimate demand before prep begins so your kitchen can reduce overproduction and redirect surplus responsibly."
       />
 
-      <Card toned title="Prediction Inputs">
+      <Card toned title="Demand Prediction">
         <form className="form-grid" onSubmit={submitPrediction}>
           <Field label="Kitchen ID" htmlFor="kitchen-id">
             <input id="kitchen-id" name="kitchenId" value={form.kitchenId} onChange={onChange} placeholder="Kitchen ID" />
           </Field>
-          <Field label="Past consumption (CSV)" htmlFor="past-consumption">
-            <input id="past-consumption" name="pastConsumption" value={form.pastConsumption} onChange={onChange} placeholder="Past consumption CSV" />
+          <Field label="Past Consumption (CSV)" htmlFor="past-consumption">
+            <input id="past-consumption" name="pastConsumption" value={form.pastConsumption} onChange={onChange} placeholder="e.g., 120,130,115,140,125" />
           </Field>
-          <Field label="Day of week" htmlFor="day-of-week">
-            <input id="day-of-week" name="dayOfWeek" value={form.dayOfWeek} onChange={onChange} placeholder="Day of Week" />
+          <Field label="Day of Week" htmlFor="day-of-week">
+            <input id="day-of-week" name="dayOfWeek" value={form.dayOfWeek} onChange={onChange} placeholder="e.g., Monday, Friday" />
           </Field>
-          <Field label="Expected people" htmlFor="expected-people">
-            <input id="expected-people" name="expectedPeople" value={form.expectedPeople} onChange={onChange} placeholder="Expected People" type="number" />
+          <Field label="Expected People" htmlFor="expected-people">
+            <input id="expected-people" name="expectedPeople" type="number" value={form.expectedPeople} onChange={onChange} placeholder="Expected number of people" />
           </Field>
           <Field label="Events (CSV)" htmlFor="events">
-            <input id="events" name="events" value={form.events} onChange={onChange} placeholder="Events CSV" />
+            <input id="events" name="events" value={form.events} onChange={onChange} placeholder="e.g., Founders Day, Festival" />
           </Field>
           <Field label="Weather" htmlFor="weather">
-            <input id="weather" name="weather" value={form.weather} onChange={onChange} placeholder="Weather" />
+            <input id="weather" name="weather" value={form.weather} onChange={onChange} placeholder="e.g., Rainy, Sunny, Cloudy" />
           </Field>
           <div className="form-action">
             <Button id="predict-submit" type="submit">Predict Demand</Button>
@@ -129,65 +83,25 @@ function Dashboard() {
       {error && <Alert tone="error" ariaLive="assertive">{error}</Alert>}
 
       {result && (
-        <Card title="Prediction Result">
+        <Card title="Prediction Results">
           <div className="stats-grid">
-            <StatChip label="Predicted quantity" value={result.predictedQuantity} />
+            <StatChip label="Predicted Quantity" value={result.predictedQuantity} />
             <StatChip
-              label="Surplus risk"
-              value={result.surplusRisk ? <Badge tone="warning">High risk</Badge> : <Badge tone="success">Controlled</Badge>}
+              label="Surplus Risk"
+              value={result.surplusRisk ? <Badge tone="warning">High Risk</Badge> : <Badge tone="success">Controlled</Badge>}
             />
             <StatChip
-              label="Donation route"
-              value={result.donationRecommended ? <Badge tone="success">Recommended</Badge> : <Badge tone="neutral">Not needed</Badge>}
+              label="Donation Recommended"
+              value={result.donationRecommended ? <Badge tone="success">Yes</Badge> : <Badge tone="neutral">No</Badge>}
             />
           </div>
-        </Card>
-      )}
-
-      <Card toned title="Food Waste Prediction (ML)">
-        <form className="form-grid" onSubmit={submitWastePrediction}>
-          <Field label="Kitchen ID" htmlFor="waste-kitchen-id">
-            <input id="waste-kitchen-id" name="kitchenId" value={wasteForm.kitchenId} onChange={onWasteChange} placeholder="Kitchen ID" />
-          </Field>
-          <Field label="Occupancy rate (0..1)" htmlFor="waste-occ">
-            <input id="waste-occ" name="occupancyRate" type="number" step="0.01" value={wasteForm.occupancyRate} onChange={onWasteChange} />
-          </Field>
-          <Field label="Temperature (°C)" htmlFor="waste-temp">
-            <input id="waste-temp" name="temperatureC" type="number" step="0.1" value={wasteForm.temperatureC} onChange={onWasteChange} />
-          </Field>
-          <Field label="Prev day meals" htmlFor="waste-prev">
-            <input id="waste-prev" name="prevDayMeals" type="number" value={wasteForm.prevDayMeals} onChange={onWasteChange} />
-          </Field>
-          <Field label="Prev 7-day avg meals" htmlFor="waste-avg7">
-            <input id="waste-avg7" name="prev7DayAvgMeals" type="number" step="0.1" value={wasteForm.prev7DayAvgMeals} onChange={onWasteChange} />
-          </Field>
-          <Field label="Meals prepared" htmlFor="waste-prepared">
-            <input id="waste-prepared" name="mealsPrepared" type="number" value={wasteForm.mealsPrepared} onChange={onWasteChange} />
-          </Field>
-          <Field label="Weather" htmlFor="waste-weather">
-            <input id="waste-weather" name="weather" value={wasteForm.weather} onChange={onWasteChange} placeholder="clear / cold / hot / humid / rain" />
-          </Field>
-          <Field label="Menu type" htmlFor="waste-menuType">
-            <input id="waste-menuType" name="menuType" value={wasteForm.menuType} onChange={onWasteChange} placeholder="standard_veg / standard_nonveg / ..." />
-          </Field>
-          <Field label="Facility type" htmlFor="waste-facilityType">
-            <input id="waste-facilityType" name="facilityType" value={wasteForm.facilityType} onChange={onWasteChange} placeholder="hostel / ..." />
-          </Field>
-          <div className="form-action">
-            <Button type="submit">Predict Waste</Button>
-          </div>
-        </form>
-      </Card>
-
-      {wasteError && <Alert tone="error" ariaLive="assertive">{wasteError}</Alert>}
-
-      {wasteResult && (
-        <Card title="Waste Prediction Result">
-          <div className="stats-grid">
-            <StatChip label="Predicted waste" value={wasteResult.predictedWaste} />
-            <StatChip label="Unit" value={wasteResult.unit || 'unknown'} />
-            <StatChip label="ML columns" value={(wasteResult.ml?.inputColumns || []).length} />
-          </div>
+          {result.adjustmentFactors && (
+            <div style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#666' }}>
+              <strong>Adjustment Factors:</strong>
+              <div>Event Multiplier: {result.adjustmentFactors.eventMultiplier?.toFixed(2) || 1}</div>
+              <div>Weather Multiplier: {result.adjustmentFactors.weatherMultiplier?.toFixed(2) || 1}</div>
+            </div>
+          )}
         </Card>
       )}
     </div>

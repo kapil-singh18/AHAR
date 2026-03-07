@@ -4,10 +4,10 @@ import Button from './ui/Button';
 import { useLanguage } from '../i18n';
 
 const navItems = [
-  { path: '/', label: 'Impact Dashboard' },
+  { path: '/', label: 'Dashboard' },
+  { path: '/prediction', label: 'Prediction' },
   { path: '/inventory', label: 'Inventory Hub' },
-  { path: '/inventory/donations', label: 'Donation Locator' },
-  { path: '/inventory/recommendations', label: 'Dish of the Day' },
+  { path: '/donations', label: 'Donation Locator' },
   { path: '/guide', label: 'Guide' }
 ];
 
