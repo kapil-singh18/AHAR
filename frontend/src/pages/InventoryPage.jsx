@@ -10,7 +10,7 @@ import PageHeader from '../components/ui/PageHeader';
 function InventoryPage() {
   const [kitchenId, setKitchenId] = useState('kitchen-nyc-001');
   const [items, setItems] = useState([]);
-  const [form, setForm] = useState({ name: '', stockQuantity: '', unit: 'kg', reorderDays: 0 });
+  const [form, setForm] = useState({ name: '', stockQuantity: '', unit: 'kg', unitCost: '', reorderDays: 0 });
   const [error, setError] = useState('');
 
   const loadInventory = async () => {
@@ -35,9 +35,10 @@ function InventoryPage() {
         name: form.name,
         stockQuantity: Number(form.stockQuantity),
         unit: form.unit,
+        unitCost: form.unitCost === '' ? undefined : Number(form.unitCost),
         reorderDays: Number(form.reorderDays)
       });
-      setForm({ name: '', stockQuantity: '', unit: 'kg', reorderDays: 0 });
+      setForm({ name: '', stockQuantity: '', unit: 'kg', unitCost: '', reorderDays: 0 });
       setError('');
       loadInventory();
     } catch (err) {
@@ -66,6 +67,17 @@ function InventoryPage() {
           <Field label="Unit" htmlFor="stock-unit">
             <input id="stock-unit" value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} placeholder="Unit" />
           </Field>
+          <Field label="Unit cost" htmlFor="stock-unit-cost">
+            <input
+              id="stock-unit-cost"
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.unitCost}
+              onChange={(e) => setForm({ ...form, unitCost: e.target.value })}
+              placeholder="Cost per unit"
+            />
+          </Field>
           <Field label="Reorder in days" htmlFor="reorder-days">
             <input
               id="reorder-days"
@@ -88,7 +100,7 @@ function InventoryPage() {
         {items.map((item) => (
           <div className="row" key={item._id}>
             <strong>{item.name}</strong>
-            <span>{item.stockQuantity} {item.unit}</span>
+            <span>{item.stockQuantity} {item.unit} | Cost: {Number(item.unitCost || 0).toFixed(2)}</span>
             <Badge tone={(item.reorderDays ?? item.reorderLevel ?? 0) <= 3 ? 'warning' : 'success'}>
               Reorder in {item.reorderDays ?? item.reorderLevel ?? 0} days
             </Badge>

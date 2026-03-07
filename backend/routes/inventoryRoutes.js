@@ -18,6 +18,7 @@ router.post(
     body('name').isString().notEmpty(),
     body('stockQuantity').isFloat({ min: 0 }),
     body('unit').isString().notEmpty(),
+    body('unitCost').optional().isFloat({ min: 0 }),
     body('reorderDays').optional().isFloat({ min: 0 })
   ],
   validateRequest,
@@ -31,6 +32,7 @@ router.put(
   [
     param('id').isMongoId(),
     body('stockQuantity').optional().isFloat({ min: 0 }),
+    body('unitCost').optional().isFloat({ min: 0 }),
     body('reorderDays').optional().isFloat({ min: 0 })
   ],
   validateRequest,

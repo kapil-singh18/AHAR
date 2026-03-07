@@ -23,6 +23,11 @@ const ingredientSchema = new mongoose.Schema(
       required: true,
       trim: true
     },
+    unitCost: {
+      type: Number,
+      min: 0,
+      default: 0
+    },
     reorderDays: {
       type: Number,
       default: 0,

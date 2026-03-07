@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import Alert from '../components/ui/Alert';
 import Button from '../components/ui/Button';
@@ -33,6 +33,24 @@ function Dashboard() {
   });
   const [wasteResult, setWasteResult] = useState(null);
   const [wasteError, setWasteError] = useState('');
+  const [dailySavings, setDailySavings] = useState(null);
+  const [dailySavingsError, setDailySavingsError] = useState('');
+
+  const loadDailySavings = async (kitchenId) => {
+    try {
+      const res = await api.get('/analytics/daily-savings', {
+        params: { kitchenId }
+      });
+      setDailySavings(res.data?.data || null);
+      setDailySavingsError('');
+    } catch (err) {
+      setDailySavingsError(err.response?.data?.message || 'Failed to load daily savings');
+    }
+  };
+
+  useEffect(() => {
+    loadDailySavings(form.kitchenId);
+  }, [form.kitchenId]);
 
   const onChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -99,6 +117,15 @@ function Dashboard() {
         title="Demand Prediction Dashboard"
         description="Estimate demand before prep begins so your kitchen can reduce overproduction and redirect surplus responsibly."
       />
+
+      <Card title="Today Financial Impact">
+        <div className="stats-grid">
+          <StatChip label="Money saved today" value={dailySavings ? dailySavings.moneySaved : 0} />
+          <StatChip label="Baseline waste cost" value={dailySavings ? dailySavings.baselineWasteCost : 0} />
+          <StatChip label="Actual waste cost" value={dailySavings ? dailySavings.actualWasteCost : 0} />
+        </div>
+      </Card>
+      {dailySavingsError && <Alert tone="error" ariaLive="assertive">{dailySavingsError}</Alert>}
 
       <Card toned title="Prediction Inputs">
         <form className="form-grid" onSubmit={submitPrediction}>

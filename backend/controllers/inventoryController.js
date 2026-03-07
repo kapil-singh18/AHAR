@@ -9,6 +9,8 @@ const createIngredient = async (req, res, next) => {
     const incomingUnit = req.body.unit?.trim();
     const incomingReorderDays =
       req.body.reorderDays === undefined ? undefined : Number(req.body.reorderDays);
+    const incomingUnitCost =
+      req.body.unitCost === undefined ? undefined : Number(req.body.unitCost);
 
     const existing = await Ingredient.findOne({ kitchenId, name });
 
@@ -24,6 +26,15 @@ const createIngredient = async (req, res, next) => {
       if (incomingReorderDays !== undefined && !Number.isNaN(incomingReorderDays)) {
         existing.reorderDays = incomingReorderDays;
       }
+      if (incomingUnitCost !== undefined && !Number.isNaN(incomingUnitCost)) {
+        const previousStock = Number(existing.stockQuantity) - incomingStock;
+        if (previousStock > 0 && incomingStock > 0) {
+          // Keep cost realistic when new stock is purchased at a different rate.
+          existing.unitCost = Number((((previousStock * existing.unitCost) + (incomingStock * incomingUnitCost)) / (previousStock + incomingStock)).toFixed(4));
+        } else {
+          existing.unitCost = incomingUnitCost;
+        }
+      }
 
       await existing.save();
       return res.status(200).json({
@@ -35,7 +46,8 @@ const createIngredient = async (req, res, next) => {
 
     const ingredient = await Ingredient.create({
       ...req.body,
-      name
+      name,
+      unitCost: incomingUnitCost === undefined || Number.isNaN(incomingUnitCost) ? 0 : incomingUnitCost
     });
     return res.status(201).json({ success: true, data: ingredient });
   } catch (error) {
