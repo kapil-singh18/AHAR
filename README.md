@@ -7,6 +7,12 @@
 
 ## 1) Setup and Run
 
+### ML Service (required for waste + recommendations)
+
+1. `cd ml-service`
+2. `python -m pip install -r requirements.txt`
+3. `python -m uvicorn app:app --host 0.0.0.0 --port 5001`
+
 ### Backend
 
 1. `cd backend`
@@ -34,9 +40,11 @@ Open the frontend URL shown by Vite (usually `http://localhost:5173`).
 2. Add dishes in **Menu** page (using ingredient IDs from inventory items).
 3. Enter cooked/consumed values in **Consumption** page.
 4. Check demand in **Dashboard** page.
+5. Check ML waste prediction in **Dashboard** page.
 5. View trends in **Analytics** page.
 6. If surplus risk is high, use **Donation Locator** page.
 7. Use **Expiry Check** page for image-based mock freshness status.
+8. Use **Dish Suggestions** page for ML recommendations.
 
 ## 3) How to Fill Each Page (Textbox-by-Textbox)
 
@@ -51,6 +59,20 @@ Use this page to predict demand and surplus.
 - `Weather`: Simple text (optional). Example: `Rainy`
 
 Click `Predict Demand`.
+
+### Food Waste Prediction (ML)
+Use this section to run the integrated food waste model.
+
+- `Occupancy rate`: value from `0` to `1` (example: `0.85`)
+- `Temperature (°C)`: numeric (example: `28`)
+- `Prev day meals`: numeric
+- `Prev 7-day avg meals`: numeric
+- `Meals prepared`: numeric
+- `Weather`: one of `clear`, `cold`, `hot`, `humid`, `rain`
+- `Menu type`: one of `high_protein`, `light_meal`, `regional_special`, `special_festival`, `standard_nonveg`, `standard_veg`
+- `Facility type`: example: `hostel`
+
+Click `Predict Waste`.
 
 Result meaning:
 - `Predicted Quantity`: Suggested total meals to prepare
@@ -174,6 +196,8 @@ Note:
 ## 5) Main APIs
 
 - `POST /api/predict-demand`
+- `POST /api/predict-waste`
+- `POST /api/recommend-dishes`
 - `POST /api/events`
 - `GET /api/events`
 - `CRUD /api/menu`

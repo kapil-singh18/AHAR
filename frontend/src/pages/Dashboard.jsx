@@ -20,6 +20,20 @@ function Dashboard() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
 
+  const [wasteForm, setWasteForm] = useState({
+    kitchenId: 'kitchen-nyc-001',
+    occupancyRate: 0.85,
+    temperatureC: 28,
+    prevDayMeals: 140,
+    prev7DayAvgMeals: 132,
+    mealsPrepared: 150,
+    weather: 'rain',
+    menuType: 'standard_veg',
+    facilityType: 'hostel'
+  });
+  const [wasteResult, setWasteResult] = useState(null);
+  const [wasteError, setWasteError] = useState('');
+
   const onChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
@@ -42,6 +56,39 @@ function Dashboard() {
       setResult(res.data);
     } catch (err) {
       setError(err.response?.data?.message || 'Prediction failed');
+    }
+  };
+
+  const onWasteChange = (e) => {
+    setWasteForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const submitWastePrediction = async (e) => {
+    e.preventDefault();
+    setWasteError('');
+    setWasteResult(null);
+
+    try {
+      const payload = {
+        kitchenId: wasteForm.kitchenId,
+        occupancyRate: Number(wasteForm.occupancyRate),
+        temperatureC: Number(wasteForm.temperatureC),
+        prevDayMeals: Number(wasteForm.prevDayMeals),
+        prev7DayAvgMeals: Number(wasteForm.prev7DayAvgMeals),
+        mealsPrepared: Number(wasteForm.mealsPrepared),
+        weather: wasteForm.weather,
+        menuType: wasteForm.menuType,
+        facilityType: wasteForm.facilityType
+      };
+
+      const res = await api.post('/predict-waste', payload);
+      setWasteResult(res.data);
+    } catch (err) {
+      if (err.response?.status === 404) {
+        setWasteError('Waste prediction endpoint is missing on the deployed backend. Redeploy backend with POST /api/predict-waste.');
+      } else {
+        setWasteError(err.response?.data?.message || 'Waste prediction failed');
+      }
     }
   };
 
@@ -93,6 +140,53 @@ function Dashboard() {
               label="Donation route"
               value={result.donationRecommended ? <Badge tone="success">Recommended</Badge> : <Badge tone="neutral">Not needed</Badge>}
             />
+          </div>
+        </Card>
+      )}
+
+      <Card toned title="Food Waste Prediction (ML)">
+        <form className="form-grid" onSubmit={submitWastePrediction}>
+          <Field label="Kitchen ID" htmlFor="waste-kitchen-id">
+            <input id="waste-kitchen-id" name="kitchenId" value={wasteForm.kitchenId} onChange={onWasteChange} placeholder="Kitchen ID" />
+          </Field>
+          <Field label="Occupancy rate (0..1)" htmlFor="waste-occ">
+            <input id="waste-occ" name="occupancyRate" type="number" step="0.01" value={wasteForm.occupancyRate} onChange={onWasteChange} />
+          </Field>
+          <Field label="Temperature (°C)" htmlFor="waste-temp">
+            <input id="waste-temp" name="temperatureC" type="number" step="0.1" value={wasteForm.temperatureC} onChange={onWasteChange} />
+          </Field>
+          <Field label="Prev day meals" htmlFor="waste-prev">
+            <input id="waste-prev" name="prevDayMeals" type="number" value={wasteForm.prevDayMeals} onChange={onWasteChange} />
+          </Field>
+          <Field label="Prev 7-day avg meals" htmlFor="waste-avg7">
+            <input id="waste-avg7" name="prev7DayAvgMeals" type="number" step="0.1" value={wasteForm.prev7DayAvgMeals} onChange={onWasteChange} />
+          </Field>
+          <Field label="Meals prepared" htmlFor="waste-prepared">
+            <input id="waste-prepared" name="mealsPrepared" type="number" value={wasteForm.mealsPrepared} onChange={onWasteChange} />
+          </Field>
+          <Field label="Weather" htmlFor="waste-weather">
+            <input id="waste-weather" name="weather" value={wasteForm.weather} onChange={onWasteChange} placeholder="clear / cold / hot / humid / rain" />
+          </Field>
+          <Field label="Menu type" htmlFor="waste-menuType">
+            <input id="waste-menuType" name="menuType" value={wasteForm.menuType} onChange={onWasteChange} placeholder="standard_veg / standard_nonveg / ..." />
+          </Field>
+          <Field label="Facility type" htmlFor="waste-facilityType">
+            <input id="waste-facilityType" name="facilityType" value={wasteForm.facilityType} onChange={onWasteChange} placeholder="hostel / ..." />
+          </Field>
+          <div className="form-action">
+            <Button type="submit">Predict Waste</Button>
+          </div>
+        </form>
+      </Card>
+
+      {wasteError && <Alert tone="error" ariaLive="assertive">{wasteError}</Alert>}
+
+      {wasteResult && (
+        <Card title="Waste Prediction Result">
+          <div className="stats-grid">
+            <StatChip label="Predicted waste" value={wasteResult.predictedWaste} />
+            <StatChip label="Unit" value={wasteResult.unit || 'unknown'} />
+            <StatChip label="ML columns" value={(wasteResult.ml?.inputColumns || []).length} />
           </div>
         </Card>
       )}

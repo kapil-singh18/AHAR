@@ -9,7 +9,8 @@ const navItems = [
   { path: '/analytics', label: 'Waste Analytics' },
   { path: '/consumption', label: 'Daily Consumption' },
   { path: '/expiry', label: 'Expiry Scan' },
-  { path: '/donations', label: 'Community Donations' }
+  { path: '/donations', label: 'Community Donations' },
+  { path: '/recommendations', label: 'Dish Suggestions' }
 ];
 
 function Layout({ children }) {
@@ -25,8 +26,8 @@ function Layout({ children }) {
     <div className="app-shell">
       <header className="top-ribbon" aria-label="Primary">
         <div className="ribbon-brand">
-          <h1>ANNAM</h1>
-          <p>AI for Needs &amp; Number Analysis in Meal management</p>
+          <h1>AHAR</h1>
+          <p>Ai based hospitality and resource optimizer</p>
         </div>
         <nav className="nav-links nav-ribbon">
           {navItems.map((item) => (

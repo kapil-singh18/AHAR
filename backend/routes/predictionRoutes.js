@@ -1,13 +1,32 @@
 const express = require('express');
 const { body, query } = require('express-validator');
 const {
+  predictWaste,
   predictDemand,
+  recommendDishes,
   createEventAdjustment,
   getEventAdjustments
 } = require('../controllers/predictionController');
 const validateRequest = require('../middleware/validateRequest');
 
 const router = express.Router();
+
+router.post(
+  '/predict-waste',
+  [
+    body('kitchenId').isString().notEmpty(),
+    body('occupancyRate').isFloat({ min: 0, max: 1 }),
+    body('temperatureC').isFloat({ min: -50, max: 70 }),
+    body('prevDayMeals').isInt({ min: 0 }),
+    body('prev7DayAvgMeals').isFloat({ min: 0 }),
+    body('mealsPrepared').isInt({ min: 0 }),
+    body('weather').isString().notEmpty(),
+    body('menuType').isString().notEmpty(),
+    body('facilityType').isString().notEmpty()
+  ],
+  validateRequest,
+  predictWaste
+);
 
 router.post(
   '/predict-demand',
@@ -22,6 +41,20 @@ router.post(
   ],
   validateRequest,
   predictDemand
+);
+
+router.post(
+  '/recommend-dishes',
+  [
+    body('kitchenId').optional().isString(),
+    body('topK').optional().isInt({ min: 1, max: 25 }),
+    body('cuisine').optional().isString(),
+    body('menuType').optional().isString(),
+    body('maxPrepTimeMin').optional().isInt({ min: 1, max: 600 }),
+    body('excludeMissingIngredients').optional().isBoolean()
+  ],
+  validateRequest,
+  recommendDishes
 );
 
 router.post(
