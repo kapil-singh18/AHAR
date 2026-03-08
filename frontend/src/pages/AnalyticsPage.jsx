@@ -39,15 +39,7 @@ function AnalyticsPage() {
         </div>
       </Card>
 
-      {reportData && (
-        <Card title="Weekly Sustainability Report">
-          <div className="stats-grid">
-            <StatChip label="Total waste" value={reportData.totalWaste} />
-            <StatChip label="Waste reduction %" value={reportData.wasteReductionPercent} />
-            <StatChip label="Estimated savings" value={`$${reportData.estimatedSavings}`} />
-          </div>
-        </Card>
-      )}
+
 
       {dashboardData && (
         <Card title="Dish-wise Waste">
