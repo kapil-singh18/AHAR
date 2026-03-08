@@ -144,6 +144,27 @@ function DashboardPage() {
                 description="Track your food waste reduction impact, cost savings, and sustainability metrics in real-time."
             />
 
+            <Card title="Waste Reduction Impact">
+                <div className="stats-grid">
+                    <StatChip
+                        label="Daily Waste Reduction"
+                        value={`${stats.dailyWasteReduction} plates`}
+                    />
+                    <StatChip
+                        label="Monthly Waste Reduction"
+                        value={`${stats.monthlyWasteReduction} plates`}
+                    />
+                    <StatChip
+                        label="Daily Money Saved"
+                        value={`₹${stats.moneySavedDaily.toLocaleString()}`}
+                    />
+                    <StatChip
+                        label="Monthly Money Saved"
+                        value={`₹${stats.moneySavedMonthly.toLocaleString()}`}
+                    />
+                </div>
+            </Card>
+
             <div className="dashboard-visual-grid">
                 <Card title="7-Day Waste Trend">
                     <div className="chart-wrap">
@@ -202,26 +223,7 @@ function DashboardPage() {
                 </div>
             </Card>
 
-            <Card title="Waste Reduction Impact">
-                <div className="stats-grid">
-                    <StatChip
-                        label="Daily Waste Reduction"
-                        value={`${stats.dailyWasteReduction} plates`}
-                    />
-                    <StatChip
-                        label="Monthly Waste Reduction"
-                        value={`${stats.monthlyWasteReduction} plates`}
-                    />
-                    <StatChip
-                        label="Daily Money Saved"
-                        value={`₹${stats.moneySavedDaily.toLocaleString()}`}
-                    />
-                    <StatChip
-                        label="Monthly Money Saved"
-                        value={`₹${stats.moneySavedMonthly.toLocaleString()}`}
-                    />
-                </div>
-            </Card>
+            
 
             <Card title="Waste Comparison">
                 <div className="stats-grid">
