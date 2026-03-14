@@ -27,7 +27,7 @@ function SidebarBody() {
   const isActive = (item) => item.matchPaths.some((path) => path === '/' ? location.pathname === '/' : location.pathname.startsWith(path));
 
   return (
-    <div className="flex h-full flex-col gap-6 rounded-[1.15rem] border border-line/70 bg-slate-200/95 px-5 py-6 text-ink shadow-soft backdrop-blur">
+    <div className="flex h-full flex-col gap-6 rounded-[1.15rem] border border-line/70 bg-sidebar px-5 py-6 text-ink shadow-soft backdrop-blur">
       <BrandMark />
 
       <div>
@@ -40,13 +40,12 @@ function SidebarBody() {
               <NavLink
                 key={item.path}
                 to={item.path}
-                className={`group flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition duration-200 ${
-                  isActive(item)
-                    ? 'bg-gradient-to-r from-brand-red to-brand-orange text-white shadow-soft'
-                    : 'text-ink-muted hover:-translate-y-0.5 hover:bg-white/10 hover:text-ink'
-                }`}
+                className={`group flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition duration-200 ${isActive(item)
+                    ? 'border border-brand-teal/30 bg-brand-teal/10 text-brand-teal shadow-soft'
+                    : 'text-ink-muted hover:-translate-y-0.5 hover:bg-surface hover:text-ink'
+                  }`}
               >
-                <span className={`flex h-10 w-10 items-center justify-center rounded-2xl ${isActive(item) ? 'bg-white/15' : 'bg-white/8 group-hover:bg-white/15'}`}>
+                <span className={`flex h-10 w-10 items-center justify-center rounded-2xl ${isActive(item) ? 'bg-brand-teal/15' : 'bg-surface group-hover:bg-surface-muted'}`}>
                   <Icon size={18} />
                 </span>
                 <span><TranslatedText text={item.label} /></span>
@@ -94,4 +93,4 @@ function AppSidebar({ mobileOpen, onClose }) {
   );
 }
 
-export default AppSidebar;
+export default AppSidebar;    

@@ -276,7 +276,7 @@ function PredictionPage() {
               </div>
               <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-surface">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-brand-red to-brand-orange transition-all duration-150"
+                  className="h-full rounded-full bg-brand-teal transition-all duration-150"
                   style={{ width: `${loadingProgress}%` }}
                 />
               </div>

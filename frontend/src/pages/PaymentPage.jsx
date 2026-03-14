@@ -142,23 +142,23 @@ function PaymentPage() {
 
       {activeTab === 'invoices' && (
         <Card title="Invoice History">
-          <div className="overflow-x-auto rounded-[1.25rem] border border-line/70">
-            <table className="min-w-full border-collapse text-xs sm:text-sm">
+          <div className="table-shell">
+            <table className="data-table">
               <thead>
-                <tr className="border-b border-line bg-surface-muted/70">
+                <tr>
                   {['Invoice ID', 'Period', 'Amount', 'Status', 'Action'].map((header) => (
-                    <th key={header} className="whitespace-nowrap px-3 py-3 text-left font-semibold text-ink">{header}</th>
+                    <th key={header}>{header}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {invoices.map((invoice) => (
-                  <tr key={invoice.id} className="border-b border-line/70 bg-surface/80">
-                    <td className="px-3 py-3 text-ink">{invoice.id}</td>
-                    <td className="px-3 py-3 text-ink">{invoice.period}</td>
-                    <td className="px-3 py-3 text-ink">₹{invoice.amount.toLocaleString('en-IN')}</td>
-                    <td className="px-3 py-3"><Badge tone={invoice.status === 'Paid' ? 'success' : 'warning'}>{invoice.status}</Badge></td>
-                    <td className="px-3 py-3">
+                  <tr key={invoice.id}>
+                    <td>{invoice.id}</td>
+                    <td>{invoice.period}</td>
+                    <td>₹{invoice.amount.toLocaleString('en-IN')}</td>
+                    <td><Badge tone={invoice.status === 'Paid' ? 'success' : 'warning'}>{invoice.status}</Badge></td>
+                    <td>
                       <Button type="button" variant="secondary" className="w-full sm:w-auto"><Download size={14} />PDF</Button>
                     </td>
                   </tr>

@@ -108,23 +108,23 @@ function DonationLocatorPage() {
 
       {activeTab === 'history' && (
         <Card title="Donation History">
-          <div className="overflow-x-auto rounded-[1.25rem] border border-line/70">
-            <table className="min-w-full border-collapse text-sm">
+          <div className="table-shell">
+            <table className="data-table">
               <thead>
-                <tr className="border-b border-line bg-surface-muted/70">
+                <tr>
                   {['Date', 'NGO', 'Food Type', 'Quantity', 'Status'].map((header) => (
-                    <th key={header} className="whitespace-nowrap px-3 py-3 text-left font-semibold text-ink">{header}</th>
+                    <th key={header}>{header}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {donationHistory.map((entry) => (
-                  <tr key={entry.id} className="border-b border-line/70 bg-surface/80">
-                    <td className="px-3 py-3 text-ink">{entry.date}</td>
-                    <td className="px-3 py-3 text-ink">{entry.ngo}</td>
-                    <td className="px-3 py-3 text-ink">{entry.foodType}</td>
-                    <td className="px-3 py-3 text-ink">{entry.quantity}</td>
-                    <td className="px-3 py-3"><Badge tone={entry.status === 'Delivered' ? 'success' : 'warning'}>{entry.status}</Badge></td>
+                  <tr key={entry.id}>
+                    <td>{entry.date}</td>
+                    <td>{entry.ngo}</td>
+                    <td>{entry.foodType}</td>
+                    <td>{entry.quantity}</td>
+                    <td><Badge tone={entry.status === 'Delivered' ? 'success' : 'warning'}>{entry.status}</Badge></td>
                   </tr>
                 ))}
               </tbody>

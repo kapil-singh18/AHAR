@@ -218,7 +218,7 @@ function DashboardPage() {
                 <line x1="20" y1="20" x2="20" y2="160" className="chart-axis" />
                 <path d={wastePath} className="chart-line" />
                 {trendSource.map((item, index) => {
-                  const x = 20 + (index * (520 / (Math.max(trendSource.length - 1, 1)))) ;
+                  const x = 20 + (index * (520 / (Math.max(trendSource.length - 1, 1))));
                   const y = 160 - ((item.waste / Math.max(...wasteValues, 1)) * 140);
                   return (
                     <g key={item.label}>
@@ -237,7 +237,7 @@ function DashboardPage() {
                 <line x1="20" y1="20" x2="20" y2="160" className="chart-axis" />
                 <path d={efficiencyPath} className="chart-line" />
                 {trendSource.map((item, index) => {
-                  const x = 20 + (index * (520 / (Math.max(trendSource.length - 1, 1)))) ;
+                  const x = 20 + (index * (520 / (Math.max(trendSource.length - 1, 1))));
                   const y = 160 - ((item.efficiency / Math.max(...efficiencyValues, 1)) * 140);
                   return (
                     <g key={`eff-${item.label}`}>
@@ -269,22 +269,22 @@ function DashboardPage() {
           )}
 
           <Card title="Top 10 In-Demand Dishes (Current Consumption)">
-            <div className="overflow-x-auto rounded-[1.25rem] border border-line/70">
-              <table className="min-w-full border-collapse text-sm">
+            <div className="table-shell">
+              <table className="data-table">
                 <thead>
-                  <tr className="border-b border-line bg-surface-muted/70">
+                  <tr>
                     {['Rank', 'Dish Name', 'Current Consumption', 'Trend'].map((header) => (
-                      <th key={header} className="whitespace-nowrap px-3 py-3 text-left font-semibold text-ink">{header}</th>
+                      <th key={header}>{header}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {topDemandDishes.map((item, index) => (
-                    <tr key={item.id} className="border-b border-line/70 bg-surface/80">
-                      <td className="px-3 py-3 text-ink">#{index + 1}</td>
-                      <td className="px-3 py-3 text-ink">{item.dish}</td>
-                      <td className="px-3 py-3 text-ink">{item.currentConsumption} {item.unit}</td>
-                      <td className="px-3 py-3"><Badge tone="success">{item.trend}</Badge></td>
+                    <tr key={item.id}>
+                      <td>#{index + 1}</td>
+                      <td>{item.dish}</td>
+                      <td>{item.currentConsumption} {item.unit}</td>
+                      <td><Badge tone="success">{item.trend}</Badge></td>
                     </tr>
                   ))}
                 </tbody>
@@ -293,25 +293,25 @@ function DashboardPage() {
           </Card>
 
           <Card title="Prediction History">
-            <div className="overflow-x-auto rounded-[1.25rem] border border-line/70">
-              <table className="min-w-full border-collapse text-sm">
+            <div className="table-shell">
+              <table className="data-table">
                 <thead>
-                  <tr className="border-b border-line bg-surface-muted/70">
+                  <tr>
                     {['Date', 'Expected', 'Predicted', 'Waste', 'Efficiency', 'Risk', 'Donation'].map((header) => (
-                      <th key={header} className="whitespace-nowrap px-3 py-3 text-left font-semibold text-ink">{header}</th>
+                      <th key={header}>{header}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {predictionHistory.map((item) => (
-                    <tr key={item.id} className="border-b border-line/70 bg-surface/80">
-                      <td className="px-3 py-3 text-ink">{item.date}</td>
-                      <td className="px-3 py-3 text-ink">{item.expected}</td>
-                      <td className="px-3 py-3 text-ink">{item.predicted}</td>
-                      <td className="px-3 py-3"><Badge tone="warning">{item.waste}</Badge></td>
-                      <td className="px-3 py-3"><Badge tone="success">{item.efficiency}%</Badge></td>
-                      <td className="px-3 py-3"><Badge tone={item.risk === 'High' ? 'danger' : 'success'}>{item.risk}</Badge></td>
-                      <td className="px-3 py-3"><Badge tone={item.donation === 'Yes' ? 'success' : 'neutral'}>{item.donation}</Badge></td>
+                    <tr key={item.id}>
+                      <td>{item.date}</td>
+                      <td>{item.expected}</td>
+                      <td>{item.predicted}</td>
+                      <td><Badge tone="warning">{item.waste}</Badge></td>
+                      <td><Badge tone="success">{item.efficiency}%</Badge></td>
+                      <td><Badge tone={item.risk === 'High' ? 'danger' : 'success'}>{item.risk}</Badge></td>
+                      <td><Badge tone={item.donation === 'Yes' ? 'success' : 'neutral'}>{item.donation}</Badge></td>
                     </tr>
                   ))}
                 </tbody>
@@ -330,11 +330,10 @@ function DashboardPage() {
                   key={range}
                   type="button"
                   onClick={() => setActiveRange(range)}
-                  className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
-                    activeRange === range
-                      ? 'border-transparent bg-gradient-to-r from-brand-red to-brand-orange text-white'
-                      : 'border-line bg-surface text-ink-muted hover:text-ink'
-                  }`}
+                  className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${activeRange === range
+                      ? 'border-brand-teal/30 bg-brand-teal/10 text-brand-teal'
+                      : 'border-line bg-surface text-ink-muted hover:border-brand-teal/30 hover:text-ink'
+                    }`}
                 >
                   {range}
                 </button>

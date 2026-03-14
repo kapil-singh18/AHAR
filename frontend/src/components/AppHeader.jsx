@@ -57,7 +57,7 @@ function AppHeader({ onMenuToggle }) {
         </Link>
         <Link
           to="/sign-up"
-          className="inline-flex items-center rounded-full bg-gradient-to-r from-brand-red to-brand-orange px-4 py-2 text-sm font-semibold text-white shadow-soft transition duration-200 hover:-translate-y-0.5"
+          className="inline-flex items-center rounded-full bg-brand-orange px-4 py-2 text-sm font-semibold text-white shadow-soft transition duration-200 hover:-translate-y-0.5"
         >
           Register
         </Link>
@@ -67,7 +67,7 @@ function AppHeader({ onMenuToggle }) {
               {user.imageUrl ? (
                 <img src={user.imageUrl} alt={user.fullName || 'Profile'} className="h-10 w-10 rounded-full object-cover" />
               ) : (
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-brand-red to-brand-orange text-sm font-bold text-white">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-teal text-sm font-bold text-white">
                   {initials}
                 </div>
               )}
@@ -79,7 +79,7 @@ function AppHeader({ onMenuToggle }) {
             <SignOutButton>
               <button
                 type="button"
-                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand-red to-brand-orange px-4 py-2 text-sm font-semibold text-white shadow-soft transition duration-200 hover:-translate-y-0.5"
+                className="inline-flex items-center gap-2 rounded-full bg-brand-red px-4 py-2 text-sm font-semibold text-white shadow-soft transition duration-200 hover:-translate-y-0.5"
               >
                 <LogOut size={16} />
                 <span>Logout</span>

@@ -35,11 +35,10 @@ function LanguageSwitcher({ compact = false }) {
             key={item.code}
             type="button"
             onClick={() => setLanguage(item.code)}
-            className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition duration-200 ${
-              isActive
-                ? 'border-transparent bg-gradient-to-r from-brand-red to-brand-orange text-white shadow-soft'
+            className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition duration-200 ${isActive
+                ? 'border-brand-teal/30 bg-brand-teal/10 text-brand-teal shadow-soft'
                 : 'border-line/80 bg-surface/75 text-ink-muted hover:border-brand-teal/40 hover:text-ink'
-            }`}
+              }`}
           >
             {item.code.toUpperCase()}
           </button>
