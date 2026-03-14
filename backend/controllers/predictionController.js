@@ -10,6 +10,39 @@ const calculateBaseDemand = (pastConsumption, expectedPeople) => {
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
+const normalizeWeatherForDemandModel = (weather = '') => {
+  const value = String(weather).toLowerCase();
+  if (value.includes('storm')) return 'storm';
+  if (value.includes('rain')) return 'rainy';
+  if (value.includes('sun')) return 'sunny';
+  return 'cloudy';
+};
+
+const deriveEventEffect = (events = []) => {
+  if (!Array.isArray(events) || !events.length) return 'none';
+  const lowered = events.map((e) => String(e).toLowerCase());
+  if (lowered.some((e) => e.includes('festival') || e.includes('event') || e.includes('holiday'))) {
+    return 'increase';
+  }
+  return 'none';
+};
+
+const deriveEventSize = (events = [], expectedPeople = 0) => {
+  if (!Array.isArray(events) || !events.length) return 'none';
+  if (expectedPeople >= 180) return 'large';
+  if (expectedPeople >= 120) return 'medium';
+  return 'small';
+};
+
+const logPredictionEvent = (level, payload) => {
+  const logLine = JSON.stringify({ ts: new Date().toISOString(), ...payload });
+  if (level === 'error') {
+    console.error(logLine);
+    return;
+  }
+  console.info(logLine);
+};
+
 const predictWaste = async (req, res, next) => {
   try {
     const {
@@ -86,15 +119,41 @@ const predictWaste = async (req, res, next) => {
 };
 
 const predictDemand = async (req, res, next) => {
+  const startedAt = Date.now();
+  let inferenceStatus = 'unknown';
   try {
     const {
       kitchenId,
-      pastConsumption,
+      pastConsumption = [],
       dayOfWeek,
       expectedPeople,
       events = [],
-      weather
+      weather,
+      date,
+      mealSlot,
+      lastDayCustomers,
+      last7DayAvg,
+      temperature,
+      weatherCondition,
+      holiday,
+      eventEffect,
+      eventSize
     } = req.body;
+
+    const numericPastConsumption = Array.isArray(pastConsumption)
+      ? pastConsumption.map((value) => Number(value || 0)).filter((value) => Number.isFinite(value))
+      : [];
+
+    const derivedExpectedPeople = Number(expectedPeople)
+      || Math.round(Number(last7DayAvg) || numericPastConsumption[0] || numericPastConsumption[numericPastConsumption.length - 1] || 0);
+
+    const fallbackPastConsumption = numericPastConsumption.length
+      ? numericPastConsumption
+      : [
+        Number(last7DayAvg) || derivedExpectedPeople || 0,
+        Number(lastDayCustomers) || derivedExpectedPeople || 0,
+        derivedExpectedPeople || 0
+      ];
 
     const eventRecords = await EventAdjustment.find({
       kitchenId,
@@ -109,19 +168,79 @@ const predictDemand = async (req, res, next) => {
       : 1;
 
     const weatherMultiplier = weather && weather.toLowerCase().includes('rain') ? 1.05 : 1;
-    const predictedQuantity = Math.round(
-      calculateBaseDemand(pastConsumption, expectedPeople) * eventMultiplier * weatherMultiplier
-    );
 
-    const surplusRisk = predictedQuantity > expectedPeople * 1.15;
+    const demandModelUrl = process.env.ML_DEMAND_URL || 'http://localhost:5001/predict-demand';
+    let predictedQuantity;
+    let mlMeta;
+    inferenceStatus = 'ml-service';
+
+    try {
+      const isWeekend = ['saturday', 'sunday'].includes(String(dayOfWeek || '').toLowerCase());
+      const resolvedLastDayCustomers = Number(lastDayCustomers)
+        || fallbackPastConsumption[fallbackPastConsumption.length - 1]
+        || derivedExpectedPeople
+        || 0;
+      const resolvedLast7DayAvg = Number(last7DayAvg)
+        || (fallbackPastConsumption.length
+          ? fallbackPastConsumption.reduce((sum, value) => sum + Number(value || 0), 0) / fallbackPastConsumption.length
+          : derivedExpectedPeople || 0);
+
+      const demandFeatures = {
+        date: date || new Date().toISOString().slice(0, 10),
+        meal_slot: String(mealSlot || 'lunch').toLowerCase(),
+        is_weekend: isWeekend,
+        holiday: typeof holiday === 'boolean'
+          ? holiday
+          : Array.isArray(events) && events.some((e) => String(e).toLowerCase().includes('holiday')),
+        special_event_effect: String(eventEffect || deriveEventEffect(events)).toLowerCase(),
+        event_size: String(eventSize || deriveEventSize(events, derivedExpectedPeople || 0)).toLowerCase(),
+        last_day_customers: Math.round(resolvedLastDayCustomers),
+        last_7_day_avg: Number(resolvedLast7DayAvg.toFixed(2)),
+        temperature: Number(temperature)
+          || (weather && weather.toLowerCase().includes('sun') ? 82 : weather && weather.toLowerCase().includes('rain') ? 68 : 74),
+        weather_condition: String(weatherCondition || normalizeWeatherForDemandModel(weather)).toLowerCase()
+      };
+
+      const { data } = await axios.post(
+        demandModelUrl,
+        { features: demandFeatures },
+        { timeout: Number(process.env.ML_TIMEOUT_MS) || 5000 }
+      );
+
+      const prediction = Number(data?.prediction);
+      if (!Number.isFinite(prediction)) {
+        throw new Error('ML demand prediction was not numeric');
+      }
+
+      predictedQuantity = Math.round(prediction);
+      mlMeta = {
+        source: 'ml-service',
+        model: data?.model || 'restaurant_demand_model',
+        externalModelUrl: demandModelUrl,
+        inputColumns: data?.input_columns || []
+      };
+    } catch (mlError) {
+      inferenceStatus = 'fallback';
+      predictedQuantity = Math.round(
+        calculateBaseDemand(fallbackPastConsumption, derivedExpectedPeople) * eventMultiplier * weatherMultiplier
+      );
+      mlMeta = {
+        source: 'fallback',
+        model: 'formula',
+        externalModelUrl: demandModelUrl,
+        reason: mlError.message
+      };
+    }
+
+    const surplusRisk = predictedQuantity > derivedExpectedPeople * 1.15;
     const donationRecommended = surplusRisk;
-    const estimatedWaste = Math.max(0, predictedQuantity - expectedPeople);
+    const estimatedWaste = Math.max(0, predictedQuantity - derivedExpectedPeople);
 
     // ── Persist to MongoDB so Dashboard can load history after restart ──
     try {
       await PredictionLog.create({
         kitchenId,
-        expectedPeople,
+        expectedPeople: derivedExpectedPeople,
         predictedQuantity,
         estimatedWaste,
         surplusRisk,
@@ -137,25 +256,38 @@ const predictDemand = async (req, res, next) => {
       console.error('[PredictionLog] Could not save to DB:', dbErr.message);
     }
 
-    const mockMlPayload = {
-      source: 'mock',
-      externalModelUrl: process.env.ML_DEMAND_URL || 'http://localhost:5001/predict',
-      modelIntegrationReady: true
-    };
-
     return res.status(200).json({
       predictedQuantity,
       surplusRisk,
       donationRecommended,
+      expectedPeople: derivedExpectedPeople,
+      requestId: req?.requestId,
       adjustmentFactors: {
         eventMultiplier,
         weatherMultiplier,
         dayOfWeek
       },
-      ml: mockMlPayload
+      ml: mlMeta
     });
   } catch (error) {
+    logPredictionEvent('error', {
+      event: 'predict-demand',
+      requestId: req?.requestId,
+      status: 'failed',
+      latencyMs: Date.now() - startedAt,
+      message: error.message
+    });
     return next(error);
+  } finally {
+    if (res.headersSent) {
+      logPredictionEvent('info', {
+        event: 'predict-demand',
+        requestId: req?.requestId,
+        status: res.statusCode,
+        inferenceSource: inferenceStatus,
+        latencyMs: Date.now() - startedAt
+      });
+    }
   }
 };
 

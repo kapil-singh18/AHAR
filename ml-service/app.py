@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import sys
+import importlib
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import joblib
 import pandas as pd
 from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel, Field
 
 
 APP_ROOT = Path(__file__).resolve().parent
@@ -21,12 +23,31 @@ MODELS_DIR = PRIMARY_MODELS_DIR if PRIMARY_MODELS_DIR.exists() else FALLBACK_MOD
 
 FOOD_WASTE_MODEL_PATH = MODELS_DIR / "food_waste_model.pkl"
 DISH_RECOMMENDER_MODEL_PATH = MODELS_DIR / "dish_recommender_model.pkl"
+DEMAND_MODEL_PATH = APP_ROOT / "restaurant_demand_model.pkl"
 
 
 app = FastAPI(title="Reckon ML Service", version="1.0.0")
+class DemandFeatures(BaseModel):
+    date: str
+    meal_slot: str = Field(pattern="^(breakfast|lunch|dinner)$")
+    is_weekend: bool
+    holiday: bool = False
+    special_event_effect: str = Field(default="none", pattern="^(decrease|none|increase)$")
+    event_size: str = Field(default="none", pattern="^(large|medium|small|none)$")
+    last_day_customers: int = Field(ge=0)
+    last_7_day_avg: float = Field(ge=0)
+    temperature: float = Field(ge=-40, le=150)
+    weather_condition: str = Field(default="cloudy", pattern="^(sunny|cloudy|rainy|storm)$")
+
+
+class DemandRequest(BaseModel):
+    features: DemandFeatures
+
+
 
 _food_waste_bundle: Optional[dict] = None
 _dish_bundle: Optional[dict] = None
+_demand_model: Optional[Any] = None
 
 
 def _load_bundle(path: Path) -> dict:
@@ -52,6 +73,23 @@ def _get_dish_bundle() -> dict:
     return _dish_bundle
 
 
+def _get_demand_model() -> Any:
+    global _demand_model
+    if _demand_model is None:
+        if not DEMAND_MODEL_PATH.exists():
+            raise FileNotFoundError(f"Demand model file not found: {DEMAND_MODEL_PATH}")
+        # Compatibility bridge for model artifacts that reference numpy._core.
+        try:
+            importlib.import_module("numpy._core")
+        except ModuleNotFoundError:
+            import numpy.core as np_core
+            sys.modules["numpy._core"] = np_core
+            import numpy.core.multiarray as np_multiarray
+            sys.modules["numpy._core.multiarray"] = np_multiarray
+        _demand_model = joblib.load(DEMAND_MODEL_PATH)
+    return _demand_model
+
+
 @app.get("/health")
 def health() -> Dict[str, Any]:
     return {
@@ -59,6 +97,94 @@ def health() -> Dict[str, Any]:
         "models_dir": str(MODELS_DIR),
         "food_waste_model_present": FOOD_WASTE_MODEL_PATH.exists(),
         "dish_recommender_model_present": DISH_RECOMMENDER_MODEL_PATH.exists(),
+        "demand_model_present": DEMAND_MODEL_PATH.exists(),
+    }
+
+
+@app.get("/ready")
+def ready() -> Dict[str, Any]:
+    try:
+        _get_demand_model()
+        return {"ok": True, "demand_model_loaded": True}
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(status_code=503, detail=f"Model readiness failed: {e}") from e
+
+
+def _create_demand_feature_vector(features: Dict[str, Any]) -> pd.DataFrame:
+    date_value = pd.to_datetime(features.get("date"), errors="coerce")
+    if pd.isna(date_value):
+        date_value = pd.Timestamp.now()
+
+    meal_slot = str(features.get("meal_slot", "lunch")).strip().lower()
+    weather_condition = str(features.get("weather_condition", "cloudy")).strip().lower()
+    special_event = str(features.get("special_event_effect", "none")).strip().lower()
+    event_size = str(features.get("event_size", "none")).strip().lower()
+
+    def to_int(name: str, default: int = 0) -> int:
+        try:
+            return int(features.get(name, default))
+        except Exception:
+            return default
+
+    def to_float(name: str, default: float = 0.0) -> float:
+        try:
+            return float(features.get(name, default))
+        except Exception:
+            return default
+
+    row = {
+        "is_weekend": int(bool(features.get("is_weekend", False))),
+        "holiday": int(bool(features.get("holiday", False))),
+        "last_day_customers": to_int("last_day_customers", 0),
+        "last_7_day_avg": to_float("last_7_day_avg", 0.0),
+        "temperature": to_float("temperature", 70.0),
+        "day_of_week": int(date_value.weekday()),
+        "month": int(date_value.month),
+        "day": int(date_value.day),
+        "meal_slot_dinner": 1 if meal_slot == "dinner" else 0,
+        "meal_slot_lunch": 1 if meal_slot == "lunch" else 0,
+        "special_event_effect_increase": 1 if special_event == "increase" else 0,
+        "special_event_effect_none": 1 if special_event == "none" else 0,
+        "event_size_medium": 1 if event_size == "medium" else 0,
+        "event_size_none": 1 if event_size == "none" else 0,
+        "event_size_small": 1 if event_size == "small" else 0,
+        "weather_condition_rainy": 1 if weather_condition == "rainy" else 0,
+        "weather_condition_storm": 1 if weather_condition == "storm" else 0,
+        "weather_condition_sunny": 1 if weather_condition == "sunny" else 0,
+    }
+
+    return pd.DataFrame([row])
+
+
+@app.post("/predict-demand")
+def predict_demand(body: DemandRequest) -> Dict[str, Any]:
+    """
+    Predict demand using the Restaurant Random Forest model.
+
+    Accepts either:
+    - { "features": { ... } }
+    - { ... }  (treated as features)
+    """
+    model = _get_demand_model()
+    features = body.features.model_dump()
+
+    try:
+        X = _create_demand_feature_vector(features)
+        y = model.predict(X)
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(status_code=400, detail=f"Demand model predict failed: {e}") from e
+
+    prediction = y[0] if hasattr(y, "__len__") else y
+    try:
+        prediction_value = float(prediction)
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(status_code=400, detail=f"Demand model returned non-numeric value: {prediction}") from e
+
+    return {
+        "prediction": prediction_value,
+        "model": "restaurant_demand_model",
+        "model_path": str(DEMAND_MODEL_PATH),
+        "input_columns": list(X.columns),
     }
 
 

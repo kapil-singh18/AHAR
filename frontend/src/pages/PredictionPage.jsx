@@ -20,24 +20,19 @@ const tabs = [
 
 const KITCHEN_ID = 'kitchen-nyc-001';
 
-function deriveWeatherLabel(temperature) {
-  if (temperature >= 34) return 'Sunny';
-  if (temperature <= 22) return 'Windy';
-  if (temperature >= 30) return 'Cloudy';
-  return 'Rainy';
-}
-
 function PredictionPage() {
   const [activeTab, setActiveTab] = useState('predict');
   const [query, setQuery] = useState('Lunch buffet - North Indian thali');
   const [form, setForm] = useState({
-    expectedPeople: 140,
     dateTime: new Date().toISOString().slice(0, 16),
     serviceWindow: 'Lunch',
-    eventType: 'Regular Day',
-    menuType: 'Buffet',
-    facilityType: 'Restaurant',
-    autoMode: true
+    holiday: false,
+    lastDayCustomers: 96,
+    last7DayAvg: 88,
+    temperature: 74,
+    weatherCondition: 'cloudy',
+    eventEffect: 'none',
+    eventSize: 'none'
   });
   const [result, setResult] = useState(null);
   const [isPredicting, setIsPredicting] = useState(false);
@@ -46,42 +41,28 @@ function PredictionPage() {
   const [alertState, setAlertState] = useState('idle'); // idle | sending | sent
 
   const autoContext = useMemo(() => {
-    const expectedPeople = Number(form.expectedPeople) || 0;
     const selectedDate = new Date(form.dateTime);
     const day = selectedDate.toLocaleDateString('en-US', { weekday: 'long' });
     const isWeekend = day === 'Saturday' || day === 'Sunday';
-
-    const baseTempByMonth = [24, 26, 30, 33, 35, 33, 30, 29, 29, 30, 28, 25];
-    const monthTemp = baseTempByMonth[selectedDate.getMonth()] || 29;
-    const temperature = monthTemp + (isWeekend ? 1 : 0);
-
-    const occupancyRate = Math.min(0.98, Math.max(0.45, Number((expectedPeople / 190).toFixed(2))));
-    const prevDayMeals = Math.max(40, Math.round(expectedPeople * (isWeekend ? 1.08 : 0.96)));
-    const prev7DayAvgMeals = Math.max(35, Math.round(expectedPeople * 0.92));
-    const mealsPrepared = Math.round(expectedPeople * 1.06);
+    const lastDayCustomers = Number(form.lastDayCustomers) || 0;
+    const last7DayAvg = Number(form.last7DayAvg) || 0;
+    const expectedPeopleEstimate = Math.round(last7DayAvg || lastDayCustomers || 0);
+    const occupancyRate = Math.min(0.98, Math.max(0.2, Number(((lastDayCustomers || expectedPeopleEstimate) / 190).toFixed(2))));
 
     return {
       day,
-      temperature,
+      isWeekend,
+      temperature: Number(form.temperature) || 74,
+      weatherCondition: form.weatherCondition,
       occupancyRate,
-      prevDayMeals,
-      prev7DayAvgMeals,
-      mealsPrepared
+      prevDayMeals: lastDayCustomers,
+      prev7DayAvgMeals: last7DayAvg,
+      expectedPeopleEstimate,
+      eventEffect: form.eventEffect,
+      eventSize: form.eventSize,
+      holiday: form.holiday
     };
-  }, [form.dateTime, form.expectedPeople]);
-
-  const eventMultiplierMap = {
-    'Regular Day': 1.0,
-    Weekend: 1.08,
-    'Corporate Event': 1.14,
-    Festival: 1.2
-  };
-
-  const serviceWindowMultiplierMap = {
-    Breakfast: 0.82,
-    Lunch: 1.0,
-    Dinner: 1.12
-  };
+  }, [form.dateTime, form.eventEffect, form.eventSize, form.holiday, form.last7DayAvg, form.lastDayCustomers, form.temperature, form.weatherCondition]);
 
   const runPrediction = async () => {
     if (isPredicting) {
@@ -112,35 +93,45 @@ function PredictionPage() {
     });
 
     try {
-      const expectedPeople = Number(form.expectedPeople) || 0;
-      const weather = deriveWeatherLabel(autoContext.temperature);
+      const expectedPeople = autoContext.expectedPeopleEstimate;
       const backendPayload = {
         kitchenId: KITCHEN_ID,
         pastConsumption: [
           autoContext.prev7DayAvgMeals,
           autoContext.prevDayMeals,
-          autoContext.mealsPrepared
+          autoContext.expectedPeopleEstimate
         ],
+        date: form.dateTime.slice(0, 10),
+        mealSlot: form.serviceWindow,
         dayOfWeek: autoContext.day,
         expectedPeople,
-        events: form.eventType === 'Regular Day' ? [] : [form.eventType],
-        weather
+        lastDayCustomers: autoContext.prevDayMeals,
+        last7DayAvg: autoContext.prev7DayAvgMeals,
+        temperature: autoContext.temperature,
+        weatherCondition: autoContext.weatherCondition,
+        holiday: autoContext.holiday,
+        eventEffect: autoContext.eventEffect,
+        eventSize: autoContext.eventSize,
+        events: autoContext.holiday ? ['Holiday'] : [],
+        weather: autoContext.weatherCondition
       };
 
       const response = await api.post('/predict-demand', backendPayload);
       const predictedPlates = Number(response.data?.predictedQuantity || 0);
-      const estimatedWaste = Math.max(0, predictedPlates - expectedPeople);
-      const efficiency = predictedPlates > 0 ? Number(((expectedPeople / predictedPlates) * 100).toFixed(1)) : 0;
+      const estimatedDemand = Number(response.data?.expectedPeople || expectedPeople || 0);
+      const estimatedWaste = Math.max(0, predictedPlates - estimatedDemand);
+      const efficiency = predictedPlates > 0 ? Number(((estimatedDemand / predictedPlates) * 100).toFixed(1)) : 0;
 
       const donationRecommended = !!response.data?.donationRecommended;
       setResult({
         predictedPlates,
         estimatedWaste,
         efficiency,
+        estimatedDemand,
         recommendation: donationRecommended ? 'Donation Recommended' : 'Normal Distribution',
         donationRecommended,
         autoContext,
-        weather,
+        weather: autoContext.weatherCondition,
         adjustmentFactors: response.data?.adjustmentFactors || null
       });
       setLoadingProgress(100);
@@ -158,6 +149,11 @@ function PredictionPage() {
   const recommendationTone = useMemo(() => {
     if (!result) return 'neutral';
     return result.recommendation.includes('Donation') ? 'warning' : 'success';
+  }, [result]);
+
+  const efficiencyValue = useMemo(() => {
+    if (!result) return 0;
+    return Math.max(0, Math.min(100, Number(result.efficiency) || 0));
   }, [result]);
 
   const sendDonationAlert = () => {
@@ -205,41 +201,57 @@ function PredictionPage() {
                 <option>Dinner</option>
               </select>
             </Field>
-            <Field label="Event Type" htmlFor="pred-event-type">
-              <select id="pred-event-type" value={form.eventType} onChange={(event) => setForm({ ...form, eventType: event.target.value })}>
-                <option>Regular Day</option>
-                <option>Weekend</option>
-                <option>Corporate Event</option>
-                <option>Festival</option>
+            <Field label="Yesterday's Customers" htmlFor="pred-last-day">
+              <input id="pred-last-day" type="number" value={form.lastDayCustomers} onChange={(event) => setForm({ ...form, lastDayCustomers: event.target.value })} />
+            </Field>
+            <Field label="7-Day Average" htmlFor="pred-last-7-day">
+              <input id="pred-last-7-day" type="number" value={form.last7DayAvg} onChange={(event) => setForm({ ...form, last7DayAvg: event.target.value })} />
+            </Field>
+            <Field label="Temperature (°F)" htmlFor="pred-temperature">
+              <input id="pred-temperature" type="number" value={form.temperature} onChange={(event) => setForm({ ...form, temperature: event.target.value })} />
+            </Field>
+            <Field label="Weather Condition" htmlFor="pred-weather-condition">
+              <select id="pred-weather-condition" value={form.weatherCondition} onChange={(event) => setForm({ ...form, weatherCondition: event.target.value })}>
+                <option value="sunny">Sunny</option>
+                <option value="cloudy">Cloudy</option>
+                <option value="rainy">Rainy</option>
+                <option value="storm">Storm</option>
               </select>
             </Field>
-            <Field label="Menu Type" htmlFor="pred-menu-type">
-              <select id="pred-menu-type" value={form.menuType} onChange={(event) => setForm({ ...form, menuType: event.target.value })}>
-                <option>Buffet</option>
-                <option>A la carte</option>
-                <option>Set Menu</option>
+            <Field label="Event Effect" htmlFor="pred-event-effect">
+              <select id="pred-event-effect" value={form.eventEffect} onChange={(event) => setForm({ ...form, eventEffect: event.target.value })}>
+                <option value="decrease">Decrease</option>
+                <option value="none">None</option>
+                <option value="increase">Increase</option>
               </select>
             </Field>
-            <Field label="Facility Type" htmlFor="pred-facility-type">
-              <select id="pred-facility-type" value={form.facilityType} onChange={(event) => setForm({ ...form, facilityType: event.target.value })}>
-                <option>Restaurant</option>
-                <option>Cloud Kitchen</option>
-                <option>Cafeteria</option>
-                <option>Institutional Kitchen</option>
+            <Field label="Event Size" htmlFor="pred-event-size">
+              <select id="pred-event-size" value={form.eventSize} onChange={(event) => setForm({ ...form, eventSize: event.target.value })}>
+                <option value="large">Large</option>
+                <option value="medium">Medium</option>
+                <option value="small">Small</option>
+                <option value="none">None</option>
+              </select>
+            </Field>
+            <Field label="Holiday" htmlFor="pred-holiday">
+              <select id="pred-holiday" value={form.holiday ? 'yes' : 'no'} onChange={(event) => setForm({ ...form, holiday: event.target.value === 'yes' })}>
+                <option value="no">No</option>
+                <option value="yes">Yes</option>
               </select>
             </Field>
           </div>
 
           <div className="mt-4 rounded-[1.4rem] border border-line/70 bg-surface-muted/70 p-4">
-            <p className="text-sm font-semibold text-ink">Auto-Captured Model Context</p>
-            <p className="mt-1 text-sm text-ink-muted">These values are generated automatically to reduce manual input.</p>
+            <p className="text-sm font-semibold text-ink">Model Context</p>
+            <p className="mt-1 text-sm text-ink-muted">These values are the exact feature inputs sent to your demand model.</p>
             <div className="mt-3 grid gap-2 text-sm text-ink-muted sm:grid-cols-2">
               <p>Day of Week: <span className="font-semibold text-ink">{autoContext.day}</span></p>
+              <p>Weekend: <span className="font-semibold text-ink">{autoContext.isWeekend ? 'Yes' : 'No'}</span></p>
               <p>Occupancy Rate: <span className="font-semibold text-ink">{autoContext.occupancyRate}</span></p>
-              <p>Temperature: <span className="font-semibold text-ink">{autoContext.temperature}°C</span></p>
+              <p>Temperature: <span className="font-semibold text-ink">{autoContext.temperature}°F</span></p>
               <p>Prev Day Meals: <span className="font-semibold text-ink">{autoContext.prevDayMeals}</span></p>
               <p>Prev 7-Day Avg Meals: <span className="font-semibold text-ink">{autoContext.prev7DayAvgMeals}</span></p>
-              <p>Meals Prepared (Auto): <span className="font-semibold text-ink">{autoContext.mealsPrepared}</span></p>
+              <p>Estimated Demand Baseline: <span className="font-semibold text-ink">{autoContext.expectedPeopleEstimate}</span></p>
             </div>
           </div>
 
@@ -275,7 +287,26 @@ function PredictionPage() {
             <div className="stats-grid">
               <Card title="Predicted Plates"><p className="text-4xl font-bold text-ink">{result.predictedPlates}</p></Card>
               <Card title="Estimated Waste"><p className="text-4xl font-bold text-brand-orange">{result.estimatedWaste}</p></Card>
-              <Card title="Efficiency Estimate"><p className="text-4xl font-bold text-brand-teal">{result.efficiency}%</p></Card>
+              <Card title="Efficiency Progress">
+                <div className="flex items-center gap-4">
+                  <div
+                    className="relative h-24 w-24 rounded-full"
+                    style={{
+                      background: `conic-gradient(rgb(var(--color-brand-teal)) ${efficiencyValue}%, rgb(var(--color-surface-muted)) ${efficiencyValue}% 100%)`
+                    }}
+                    role="img"
+                    aria-label={`Efficiency progress ${efficiencyValue}%`}
+                  >
+                    <div className="absolute inset-[9px] flex items-center justify-center rounded-full bg-surface">
+                      <span className="text-lg font-bold text-brand-teal">{efficiencyValue}%</span>
+                    </div>
+                  </div>
+                  <div className="text-sm text-ink-muted">
+                    <p className="font-semibold text-ink">Efficiency Estimate</p>
+                    <p>Target: 90%+</p>
+                  </div>
+                </div>
+              </Card>
               <Card title="Recommendation"><Badge tone={recommendationTone}>{result.recommendation}</Badge></Card>
             </div>
           )}
@@ -336,8 +367,8 @@ function PredictionPage() {
           {result?.autoContext && (
             <div className="mt-4 rounded-[1.4rem] border border-line/70 bg-surface-muted/70 p-4 text-sm text-ink-muted">
               <p className="font-semibold text-ink">Context Used For This Prediction</p>
-              <p className="mt-2">Day: {result.autoContext.day} | Occupancy: {result.autoContext.occupancyRate} | Temp: {result.autoContext.temperature}°C</p>
-              <p className="mt-1">Prev Day: {result.autoContext.prevDayMeals} | Prev 7-day Avg: {result.autoContext.prev7DayAvgMeals} | Prepared: {result.autoContext.mealsPrepared}</p>
+              <p className="mt-2">Day: {result.autoContext.day} | Weekend: {result.autoContext.isWeekend ? 'Yes' : 'No'} | Temp: {result.autoContext.temperature}°F</p>
+              <p className="mt-1">Prev Day: {result.autoContext.prevDayMeals} | Prev 7-day Avg: {result.autoContext.prev7DayAvgMeals} | Baseline: {result.autoContext.expectedPeopleEstimate}</p>
               <p className="mt-1">Weather: {result.weather}</p>
             </div>
           )}
