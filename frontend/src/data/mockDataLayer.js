@@ -62,7 +62,7 @@ export const inventoryItems = [
       { id: 'i1-b2', quantity: 18, expiryDate: '2026-03-19' },
       { id: 'i1-b3', quantity: 10, expiryDate: '2026-03-25' }
     ],
-    imageUrl: 'https://images.unsplash.com/photo-1566843972142-a7fcb70de55a?auto=format&fit=crop&w=800&q=60',
+    imageUrl: 'https://images.unsplash.com/photo-1607305387299-a3d9611cd469?auto=format&fit=crop&w=800&q=60',
     notes: 'Keep refrigerated after opening.'
   },
   {
@@ -77,7 +77,7 @@ export const inventoryItems = [
       { id: 'i2-b2', quantity: 9, expiryDate: '2026-03-16' },
       { id: 'i2-b3', quantity: 6, expiryDate: '2026-03-20' }
     ],
-    imageUrl: 'https://images.unsplash.com/photo-1615485290382-441e4d049cb5?auto=format&fit=crop&w=800&q=60',
+    imageUrl: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=800&q=60',
     notes: 'First-in rack A2.'
   },
   {
@@ -92,7 +92,7 @@ export const inventoryItems = [
       { id: 'i3-b2', quantity: 65, expiryDate: '2026-05-20' },
       { id: 'i3-b3', quantity: 55, expiryDate: '2026-06-15' }
     ],
-    imageUrl: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=800&q=60',
+    imageUrl: 'https://images.unsplash.com/photo-1536304929831-ee1ca9d44906?auto=format&fit=crop&w=800&q=60',
     notes: 'Store in dry silos.'
   },
   {
@@ -108,6 +108,117 @@ export const inventoryItems = [
     ],
     imageUrl: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?auto=format&fit=crop&w=800&q=60',
     notes: 'Wash before prep.'
+  },
+  {
+    id: 'i5',
+    name: 'Yellow Onions',
+    category: 'Produce',
+    quantity: 80,
+    unit: 'kg',
+    expiryDate: '2026-04-13',
+    batches: [
+      { id: 'i5-b1', quantity: 30, expiryDate: '2026-03-28' },
+      { id: 'i5-b2', quantity: 50, expiryDate: '2026-04-13' }
+    ],
+    imageUrl: 'https://images.unsplash.com/photo-1508747703725-719777637510?auto=format&fit=crop&w=800&q=60',
+    notes: 'Store in cool, dry place. No refrigeration needed.'
+  },
+  {
+    id: 'i6',
+    name: 'Sunflower Oil',
+    category: 'Dry Goods',
+    quantity: 50,
+    unit: 'L',
+    expiryDate: '2027-03-14',
+    batches: [
+      { id: 'i6-b1', quantity: 20, expiryDate: '2026-12-14' },
+      { id: 'i6-b2', quantity: 30, expiryDate: '2027-03-14' }
+    ],
+    imageUrl: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?auto=format&fit=crop&w=800&q=60',
+    notes: 'Store away from direct sunlight.'
+  },
+  {
+    id: 'i7',
+    name: 'Whole Wheat Flour',
+    category: 'Dry Goods',
+    quantity: 120,
+    unit: 'kg',
+    expiryDate: '2026-09-14',
+    batches: [
+      { id: 'i7-b1', quantity: 60, expiryDate: '2026-07-14' },
+      { id: 'i7-b2', quantity: 60, expiryDate: '2026-09-14' }
+    ],
+    imageUrl: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=60',
+    notes: 'Keep in airtight containers, away from moisture.'
+  },
+  {
+    id: 'i8',
+    name: 'Chickpeas (Chole)',
+    category: 'Dry Goods',
+    quantity: 45,
+    unit: 'kg',
+    expiryDate: '2027-01-14',
+    batches: [
+      { id: 'i8-b1', quantity: 25, expiryDate: '2026-10-14' },
+      { id: 'i8-b2', quantity: 20, expiryDate: '2027-01-14' }
+    ],
+    imageUrl: 'https://images.unsplash.com/photo-1515543904379-3d757afe72e4?auto=format&fit=crop&w=800&q=60',
+    notes: 'Soak overnight before cooking.'
+  },
+  {
+    id: 'i9',
+    name: 'Fresh Butter',
+    category: 'Dairy',
+    quantity: 10,
+    unit: 'kg',
+    expiryDate: '2026-04-13',
+    batches: [
+      { id: 'i9-b1', quantity: 5, expiryDate: '2026-03-28' },
+      { id: 'i9-b2', quantity: 5, expiryDate: '2026-04-13' }
+    ],
+    imageUrl: 'https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?auto=format&fit=crop&w=800&q=60',
+    notes: 'Keep refrigerated at all times.'
+  },
+  {
+    id: 'i10',
+    name: 'Garam Masala',
+    category: 'Dry Goods',
+    quantity: 8,
+    unit: 'kg',
+    expiryDate: '2028-03-14',
+    batches: [
+      { id: 'i10-b1', quantity: 8, expiryDate: '2028-03-14' }
+    ],
+    imageUrl: 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?auto=format&fit=crop&w=800&q=60',
+    notes: 'Store in airtight containers to preserve aroma.'
+  },
+  {
+    id: 'i11',
+    name: 'Chicken Breast',
+    category: 'Protein',
+    quantity: 30,
+    unit: 'kg',
+    expiryDate: '2026-03-16',
+    batches: [
+      { id: 'i11-b1', quantity: 15, expiryDate: '2026-03-15' },
+      { id: 'i11-b2', quantity: 15, expiryDate: '2026-03-16' }
+    ],
+    imageUrl: 'https://images.unsplash.com/photo-1604503468506-a8da13d82791?auto=format&fit=crop&w=800&q=60',
+    notes: 'Keep at 0–4°C. Use within 2 days of delivery.'
+  },
+  {
+    id: 'i12',
+    name: 'Greek Yogurt (Dahi)',
+    category: 'Dairy',
+    quantity: 18,
+    unit: 'kg',
+    expiryDate: '2026-03-21',
+    batches: [
+      { id: 'i12-b1', quantity: 10, expiryDate: '2026-03-18' },
+      { id: 'i12-b2', quantity: 8, expiryDate: '2026-03-21' }
+    ],
+    imageUrl: 'https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=800&q=60',
+    notes: 'Refrigerate at all times. Great for raita.'
   }
 ];
 

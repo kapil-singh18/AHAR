@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Search, Sparkles } from 'lucide-react';
+import { Bell, BellRing, CheckCircle2, PhoneCall, Search, Sparkles } from 'lucide-react';
 import Alert from '../components/ui/Alert';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
@@ -7,7 +7,10 @@ import Card from '../components/ui/Card';
 import Field from '../components/ui/Field';
 import PageHeader from '../components/ui/PageHeader';
 import SectionTabs from '../components/SectionTabs';
+import { nearestNgos } from '../data/mockDataLayer';
 import api from '../services/api';
+
+const NEAREST_NGO = [...nearestNgos].sort((a, b) => a.distanceKm - b.distanceKm)[0];
 
 const tabs = [
   { id: 'predict', label: 'Prediction Input' },
@@ -40,6 +43,7 @@ function PredictionPage() {
   const [isPredicting, setIsPredicting] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [error, setError] = useState('');
+  const [alertState, setAlertState] = useState('idle'); // idle | sending | sent
 
   const autoContext = useMemo(() => {
     const expectedPeople = Number(form.expectedPeople) || 0;
@@ -128,16 +132,21 @@ function PredictionPage() {
       const estimatedWaste = Math.max(0, predictedPlates - expectedPeople);
       const efficiency = predictedPlates > 0 ? Number(((expectedPeople / predictedPlates) * 100).toFixed(1)) : 0;
 
+      const donationRecommended = !!response.data?.donationRecommended;
       setResult({
         predictedPlates,
         estimatedWaste,
         efficiency,
-        recommendation: response.data?.donationRecommended ? 'Donation Recommended' : 'Normal Distribution',
+        recommendation: donationRecommended ? 'Donation Recommended' : 'Normal Distribution',
+        donationRecommended,
         autoContext,
         weather,
         adjustmentFactors: response.data?.adjustmentFactors || null
       });
       setLoadingProgress(100);
+      if (donationRecommended) {
+        setAlertState('idle');
+      }
     } catch (requestError) {
       setError(requestError.response?.data?.message || 'Prediction request failed.');
       setActiveTab('predict');
@@ -150,6 +159,12 @@ function PredictionPage() {
     if (!result) return 'neutral';
     return result.recommendation.includes('Donation') ? 'warning' : 'success';
   }, [result]);
+
+  const sendDonationAlert = () => {
+    if (alertState !== 'idle') return;
+    setAlertState('sending');
+    setTimeout(() => setAlertState('sent'), 1600);
+  };
 
   return (
     <div className="stack">
@@ -265,6 +280,59 @@ function PredictionPage() {
               <Card title="Estimated Waste"><p className="text-4xl font-bold text-brand-orange">{result.estimatedWaste}</p></Card>
               <Card title="Efficiency Estimate"><p className="text-4xl font-bold text-brand-teal">{result.efficiency}%</p></Card>
               <Card title="Recommendation"><Badge tone={recommendationTone}>{result.recommendation}</Badge></Card>
+            </div>
+          )}
+
+          {result?.donationRecommended && !isPredicting && (
+            <div className="mt-4 overflow-hidden rounded-[1.4rem] border border-amber-500/40 bg-amber-500/8">
+              <div className="flex items-center gap-3 border-b border-amber-500/20 px-5 py-3">
+                {alertState === 'sent'
+                  ? <CheckCircle2 size={18} className="text-emerald-500" />
+                  : <BellRing size={18} className="animate-bounce text-amber-500" />}
+                <p className="text-sm font-semibold text-ink">
+                  {alertState === 'sent' ? 'Donation Alert Sent' : 'Donation Alert — Nearest NGO'}
+                </p>
+                {alertState === 'sent' && (
+                  <span className="ml-auto rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-semibold text-emerald-600">Notified</span>
+                )}
+                {alertState !== 'sent' && (
+                  <span className="ml-auto rounded-full bg-amber-500/15 px-2.5 py-0.5 text-xs font-semibold text-amber-700">Action Required</span>
+                )}
+              </div>
+              <div className="grid gap-4 p-5 md:grid-cols-[auto_1fr_auto]">
+                <img
+                  src={NEAREST_NGO.imageUrl}
+                  alt={NEAREST_NGO.name}
+                  className="h-20 w-28 rounded-[1rem] object-cover"
+                />
+                <div className="flex flex-col justify-center gap-1">
+                  <p className="text-base font-semibold text-ink">{NEAREST_NGO.name}</p>
+                  <p className="text-sm text-ink-muted">{NEAREST_NGO.description}</p>
+                  <div className="flex flex-wrap gap-4 pt-1 text-sm">
+                    <span className="flex items-center gap-1.5 text-ink-muted">
+                      <PhoneCall size={13} />{NEAREST_NGO.contact}
+                    </span>
+                    <Badge tone="success">{NEAREST_NGO.distanceKm} km away</Badge>
+                  </div>
+                </div>
+                <div className="flex items-center">
+                  {alertState === 'sent' ? (
+                    <div className="flex items-center gap-2 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-600">
+                      <CheckCircle2 size={15} /> Alert Sent
+                    </div>
+                  ) : (
+                    <Button type="button" onClick={sendDonationAlert} disabled={alertState === 'sending'}>
+                      <Bell size={15} />
+                      {alertState === 'sending' ? 'Sending…' : 'Send Alert'}
+                    </Button>
+                  )}
+                </div>
+              </div>
+              {alertState === 'sent' && (
+                <div className="border-t border-emerald-500/20 bg-emerald-500/8 px-5 py-3 text-sm text-emerald-700">
+                  Donation request dispatched to <strong>{NEAREST_NGO.name}</strong> via SMS &amp; app notification. They will confirm pickup shortly.
+                </div>
+              )}
             </div>
           )}
 
