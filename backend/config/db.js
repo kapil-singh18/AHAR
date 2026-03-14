@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const env = require('./env');
 
 function isSrvResolutionError(error) {
   const message = String(error?.message || '').toLowerCase();
@@ -11,11 +12,17 @@ function isSrvResolutionError(error) {
 }
 
 const connectDB = async () => {
-  const primaryUri = process.env.MONGODB_URI;
-  const fallbackUri = process.env.MONGODB_URI_FALLBACK;
+  const primaryUri = env.mongoUri;
+  const fallbackUri = env.mongoUriFallback;
+
+  if (!primaryUri) {
+    throw new Error('MONGODB_URI is not set');
+  }
 
   try {
-    const conn = await mongoose.connect(primaryUri);
+    const conn = await mongoose.connect(primaryUri, {
+      serverSelectionTimeoutMS: 7000
+    });
     console.log(`MongoDB connected: ${conn.connection.host}`);
     return conn;
   } catch (error) {
@@ -28,7 +35,9 @@ const connectDB = async () => {
     }
 
     console.warn('MongoDB SRV DNS lookup failed. Trying MONGODB_URI_FALLBACK...');
-    const conn = await mongoose.connect(fallbackUri);
+    const conn = await mongoose.connect(fallbackUri, {
+      serverSelectionTimeoutMS: 7000
+    });
     console.log(`MongoDB connected via fallback: ${conn.connection.host}`);
     return conn;
   }
