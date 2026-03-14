@@ -1,10 +1,10 @@
 import React from 'react';
-import { useLanguage } from '../../i18n';
+import useTranslate from '../../hooks/useTranslate';
 
 function Badge({ tone = 'neutral', children }) {
-  const { t } = useLanguage();
+  const translated = useTranslate(typeof children === 'string' ? children : '');
 
-  return <span className={`badge badge-${tone}`}>{typeof children === 'string' ? t(children) : children}</span>;
+  return <span className={`badge badge-${tone}`}>{typeof children === 'string' ? translated : children}</span>;
 }
 
 export default Badge;

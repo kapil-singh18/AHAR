@@ -1,16 +1,16 @@
 import React from 'react';
-import { useLanguage } from '../../i18n';
+import useTranslate from '../../hooks/useTranslate';
 
 function PageHeader({ eyebrow, title, description }) {
-  const { t } = useLanguage();
-
-  const tr = (value) => (typeof value === 'string' ? t(value) : value);
+  const translatedEyebrow = useTranslate(typeof eyebrow === 'string' ? eyebrow : '');
+  const translatedTitle = useTranslate(typeof title === 'string' ? title : '');
+  const translatedDescription = useTranslate(typeof description === 'string' ? description : '');
 
   return (
     <header className="page-head fade-in">
-      {eyebrow && <p className="eyebrow">{tr(eyebrow)}</p>}
-      <h1>{tr(title)}</h1>
-      {description && <p>{tr(description)}</p>}
+      {eyebrow && <p className="eyebrow">{typeof eyebrow === 'string' ? translatedEyebrow : eyebrow}</p>}
+      <h1>{typeof title === 'string' ? translatedTitle : title}</h1>
+      {description && <p>{typeof description === 'string' ? translatedDescription : description}</p>}
     </header>
   );
 }

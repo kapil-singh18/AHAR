@@ -1,9 +1,9 @@
 import React from 'react';
-import { useLanguage } from '../../i18n';
+import useTranslate from '../../hooks/useTranslate';
 
 function Button({ variant = 'primary', className = '', children, ...props }) {
-  const { t } = useLanguage();
-  const content = typeof children === 'string' ? t(children) : children;
+  const translatedText = useTranslate(typeof children === 'string' ? children : '');
+  const content = typeof children === 'string' ? translatedText : children;
 
   return (
     <button className={`btn btn-${variant} ${className}`.trim()} {...props}>

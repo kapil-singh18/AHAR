@@ -1,12 +1,12 @@
 import React from 'react';
-import { useLanguage } from '../../i18n';
+import useTranslate from '../../hooks/useTranslate';
 
 function StatChip({ label, value }) {
-  const { t } = useLanguage();
+  const translatedLabel = useTranslate(typeof label === 'string' ? label : '');
 
   return (
     <article className="stat-chip">
-      <p>{typeof label === 'string' ? t(label) : label}</p>
+      <p>{typeof label === 'string' ? translatedLabel : label}</p>
       <strong>{value}</strong>
     </article>
   );

@@ -12,6 +12,11 @@ const ingredientSchema = new mongoose.Schema(
       required: true,
       trim: true
     },
+    category: {
+      type: String,
+      trim: true,
+      default: ''
+    },
     stockQuantity: {
       type: Number,
       required: true,

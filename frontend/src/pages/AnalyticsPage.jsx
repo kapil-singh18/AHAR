@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import api from '../services/api';
+import Alert from '../components/ui/Alert';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
@@ -11,14 +12,24 @@ function AnalyticsPage() {
   const [kitchenId, setKitchenId] = useState('kitchen-nyc-001');
   const [dashboardData, setDashboardData] = useState(null);
   const [reportData, setReportData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const loadAnalytics = async () => {
-    const [dashboardRes, reportRes] = await Promise.all([
-      api.get('/analytics/waste-dashboard', { params: { kitchenId } }),
-      api.get('/analytics/weekly-report', { params: { kitchenId } })
-    ]);
-    setDashboardData(dashboardRes.data.data);
-    setReportData(reportRes.data.data);
+    try {
+      setLoading(true);
+      setError('');
+      const [dashboardRes, reportRes] = await Promise.all([
+        api.get('/analytics/waste-dashboard', { params: { kitchenId } }),
+        api.get('/analytics/weekly-report', { params: { kitchenId } })
+      ]);
+      setDashboardData(dashboardRes.data.data);
+      setReportData(reportRes.data.data);
+    } catch (requestError) {
+      setError(requestError.response?.data?.message || 'Failed to load analytics.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -34,12 +45,23 @@ function AnalyticsPage() {
             <input value={kitchenId} onChange={(e) => setKitchenId(e.target.value)} placeholder="Kitchen ID" id="analytics-kitchen-id" />
           </Field>
           <div className="form-action">
-            <Button id="load-analytics" type="button" onClick={loadAnalytics}>Load Analytics</Button>
+            <Button id="load-analytics" type="button" onClick={loadAnalytics} disabled={loading}>{loading ? 'Loading...' : 'Load Analytics'}</Button>
           </div>
         </div>
       </Card>
 
+      {error && <Alert tone="error">{error}</Alert>}
 
+      {reportData && (
+        <Card title="Weekly Sustainability Report">
+          <div className="stats-grid">
+            <StatChip label="Total waste" value={<Badge tone="warning">{reportData.totalWaste ?? 0}</Badge>} />
+            <StatChip label="Waste reduction %" value={`${reportData.wasteReductionPercent ?? 0}%`} />
+            <StatChip label="Estimated savings" value={`₹${Number(reportData.estimatedSavings ?? 0).toLocaleString('en-IN')}`} />
+            <StatChip label="Kitchen ID" value={kitchenId} />
+          </div>
+        </Card>
+      )}
 
       {dashboardData && (
         <Card title="Dish-wise Waste">

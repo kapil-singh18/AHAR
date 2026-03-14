@@ -1,319 +1,177 @@
-import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
-import Alert from '../components/ui/Alert';
+import 'leaflet/dist/leaflet.css';
+import React, { useMemo, useState } from 'react';
+import { LocateFixed, MapPinned, PhoneCall } from 'lucide-react';
+import L from 'leaflet';
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet';
 import Badge from '../components/ui/Badge';
+import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Field from '../components/ui/Field';
 import PageHeader from '../components/ui/PageHeader';
+import SectionTabs from '../components/SectionTabs';
+import { donationHistory, nearestNgos } from '../data/mockDataLayer';
+
+const donationTabs = [
+  { id: 'nearest', label: 'Nearest NGOs' },
+  { id: 'history', label: 'History' },
+  { id: 'map', label: 'Map (Optional)' }
+];
+
+const ngoIcon = L.icon({
+  iconRetinaUrl: markerIcon2x,
+  iconUrl: markerIcon,
+  shadowUrl: markerShadow,
+  iconAnchor: [12, 41]
+});
 
 function DonationLocatorPage() {
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [loadError, setLoadError] = useState('');
-  const [fetching, setFetching] = useState(false);
+  const [activeTab, setActiveTab] = useState('nearest');
+  const [radius, setRadius] = useState(6);
+  const [sortBy, setSortBy] = useState('distance');
 
-  const [radiusKm, setRadiusKm] = useState(10);
-  const [currentPosition, setCurrentPosition] = useState(null);
-  const [ngos, setNgos] = useState([]);
-  const [status, setStatus] = useState('Waiting for location...');
-  const [error, setError] = useState('');
+  const filteredNgos = useMemo(() => {
+    const list = nearestNgos.filter((ngo) => ngo.distanceKm <= radius);
+    if (sortBy === 'name') {
+      return [...list].sort((a, b) => a.name.localeCompare(b.name));
+    }
+    return [...list].sort((a, b) => a.distanceKm - b.distanceKm);
+  }, [radius, sortBy]);
 
-  const mapRef = useRef(null);
-  const mapInstanceRef = useRef(null);
-  const markersRef = useRef([]);
-  const infoWindowRef = useRef(null);
-
-  const mapCenter = useMemo(() => currentPosition || { lat: 40.7128, lng: -74.006 }, [currentPosition]);
-
-  // Load Google Maps for rendering only (no Places API needed)
-  useEffect(() => {
-    if (window.google && window.google.maps) {
-      setIsLoaded(true);
-      return;
+  const mapCenter = useMemo(() => {
+    if (!filteredNgos.length) {
+      return [19.076, 72.8777];
     }
 
-    const script = document.createElement('script');
-    script.src = 'https://maps.googleapis.com/maps/api/js?key=AIzaSyAOVYRIgupAurZup5y1PRh8Ismb1A3lLao';
-    script.async = true;
-    script.defer = true;
-
-    script.onload = () => {
-      setTimeout(() => {
-        if (window.google && window.google.maps) {
-          setIsLoaded(true);
-        } else {
-          setLoadError('Failed to initialize Google Maps.');
-        }
-      }, 500);
-    };
-
-    script.onerror = () => setLoadError('Error loading Google Maps script');
-    document.body.appendChild(script);
-
-    return () => {
-      if (document.body.contains(script)) {
-        document.body.removeChild(script);
-      }
-    };
-  }, []);
-
-  // Initialize Map
-  useEffect(() => {
-    if (!isLoaded || !mapRef.current || mapInstanceRef.current) return;
-
-    mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
-      center: mapCenter,
-      zoom: 13,
-      mapTypeControl: false
-    });
-
-    infoWindowRef.current = new window.google.maps.InfoWindow();
-  }, [isLoaded, mapCenter]);
-
-  // Handle Geolocation
-  useEffect(() => {
-    if (!navigator.geolocation) {
-      setError('Geolocation is not supported in this browser.');
-      return undefined;
-    }
-
-    const watchId = navigator.geolocation.watchPosition(
-      (pos) => {
-        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        setCurrentPosition(coords);
-        setStatus(`Live location updated: ${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`);
-
-        if (mapInstanceRef.current) {
-          mapInstanceRef.current.setCenter(coords);
-        }
-      },
-      () => {
-        setError('Location access denied or unavailable.');
-      },
-      { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
-    );
-
-    return () => navigator.geolocation.clearWatch(watchId);
-  }, []);
-
-  // Fetch NGOs from Overpass API + plot on Google Map
-  const fetchAndPlotNgos = useCallback(async () => {
-    if (!currentPosition || !mapInstanceRef.current) return;
-
-    setFetching(true);
-
-    const { lat, lng } = currentPosition;
-    const radiusMeters = radiusKm * 1000;
-
-    const overpassQuery = `
-      [out:json][timeout:25];
-      (
-        node["office"="ngo"](around:${radiusMeters},${lat},${lng});
-        way["office"="ngo"](around:${radiusMeters},${lat},${lng});
-        relation["office"="ngo"](around:${radiusMeters},${lat},${lng});
-        node["office"="charity"](around:${radiusMeters},${lat},${lng});
-        way["office"="charity"](around:${radiusMeters},${lat},${lng});
-        relation["office"="charity"](around:${radiusMeters},${lat},${lng});
-        node["amenity"="ngo"](around:${radiusMeters},${lat},${lng});
-        node["amenity"="food_bank"](around:${radiusMeters},${lat},${lng});
-        node["amenity"="social_facility"](around:${radiusMeters},${lat},${lng});
-        way["amenity"="social_facility"](around:${radiusMeters},${lat},${lng});
-        relation["amenity"="social_facility"](around:${radiusMeters},${lat},${lng});
-        node["amenity"="community_centre"](around:${radiusMeters},${lat},${lng});
-        way["amenity"="community_centre"](around:${radiusMeters},${lat},${lng});
-        node["social_facility"="food_bank"](around:${radiusMeters},${lat},${lng});
-        node["social_facility"="soup_kitchen"](around:${radiusMeters},${lat},${lng});
-      );
-      out center;
-    `;
-
-    try {
-      const resp = await fetch('https://overpass-api.de/api/interpreter', {
-        method: 'POST',
-        body: overpassQuery
-      });
-
-      if (!resp.ok) throw new Error('Overpass API error');
-
-      const data = await resp.json();
-
-      const earthKm = 6371;
-      const toRadians = (v) => (v * Math.PI) / 180;
-
-      const results = data.elements
-        .map((el) => {
-          const ngoLat = el.lat || el.center?.lat;
-          const ngoLng = el.lon || el.center?.lon;
-          if (!ngoLat || !ngoLng) return null;
-
-          const dLat = toRadians(ngoLat - lat);
-          const dLng = toRadians(ngoLng - lng);
-          const a =
-            Math.sin(dLat / 2) ** 2 +
-            Math.cos(toRadians(lat)) * Math.cos(toRadians(ngoLat)) * Math.sin(dLng / 2) ** 2;
-          const distanceKm = Number((earthKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))).toFixed(2));
-
-          return {
-            _id: el.id.toString(),
-            name: el.tags?.name || el.tags?.operator || 'NGO / Community Centre',
-            address: el.tags?.['addr:full'] || el.tags?.['addr:street'] || 'Address not listed',
-            phone: el.tags?.phone || el.tags?.['contact:phone'] || 'Not listed',
-            website: el.tags?.website || el.tags?.['contact:website'] || null,
-            openingHours: el.tags?.opening_hours || null,
-            lat: ngoLat,
-            lng: ngoLng,
-            distanceKm
-          };
-        })
-        .filter(Boolean)
-        .sort((a, b) => a.distanceKm - b.distanceKm);
-
-      setNgos(results);
-      setError('');
-
-      // Clear old markers
-      markersRef.current.forEach((m) => m.setMap(null));
-      markersRef.current = [];
-
-      // User position marker
-      const userMarker = new window.google.maps.Marker({
-        position: currentPosition,
-        map: mapInstanceRef.current,
-        icon: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png',
-        title: 'Your Location'
-      });
-      markersRef.current.push(userMarker);
-
-      // NGO markers
-      results.forEach((ngo) => {
-        const m = new window.google.maps.Marker({
-          position: { lat: ngo.lat, lng: ngo.lng },
-          map: mapInstanceRef.current,
-          title: ngo.name
-        });
-
-        m.addListener('click', () => {
-          infoWindowRef.current.setContent(`
-            <div style="color:#111;min-width:200px">
-              <strong style="font-size:1rem">${ngo.name}</strong><br/>
-              <span style="color:#555;font-size:0.85rem">${ngo.address}</span><br/>
-              <span style="color:#555;font-size:0.85rem">📞 ${ngo.phone}</span><br/>
-              ${ngo.openingHours ? `<span style="color:#555;font-size:0.85rem">🕐 ${ngo.openingHours}</span><br/>` : ''}
-              <strong style="color:#28a745">📍 ${ngo.distanceKm} km away</strong>
-            </div>
-          `);
-          infoWindowRef.current.open(mapInstanceRef.current, m);
-        });
-
-        markersRef.current.push(m);
-      });
-    } catch (err) {
-      setError('Failed to load nearby NGOs. Please try again.');
-    } finally {
-      setFetching(false);
-    }
-  }, [currentPosition, radiusKm]);
-
-  // Trigger search when map is ready and we have a position
-  useEffect(() => {
-    if (!isLoaded || !currentPosition) return;
-    const timer = setTimeout(fetchAndPlotNgos, 600);
-    return () => clearTimeout(timer);
-  }, [isLoaded, currentPosition, radiusKm, fetchAndPlotNgos]);
-
-  if (loadError) {
-    return (
-      <div className="stack">
-        <Alert tone="error">{loadError}</Alert>
-      </div>
-    );
-  }
-
-  if (!isLoaded) {
-    return (
-      <div className="stack">
-        <Alert tone="info">Loading maps interface...</Alert>
-      </div>
-    );
-  }
+    const lat = filteredNgos.reduce((sum, ngo) => sum + ngo.lat, 0) / filteredNgos.length;
+    const lng = filteredNgos.reduce((sum, ngo) => sum + ngo.lng, 0) / filteredNgos.length;
+    return [lat, lng];
+  }, [filteredNgos]);
 
   return (
     <div className="stack">
       <PageHeader
-        eyebrow="Redistribution Network"
-        title="Nearest NGO Locator"
-        description="Route safe surplus to nearby community partners in real time and keep edible food in circulation."
+        eyebrow="Redistribution"
+        title="Donation Locator"
+        description="Connect surplus food with nearby NGO partners, track pickup history, and view map-ready locations."
       />
 
-      <Card toned title="Search Radius">
-        <div className="form-grid">
-          <Field label="Radius (km)" htmlFor="radius-km">
-            <input
-              id="radius-km"
-              type="number"
-              min="1"
-              max="200"
-              value={radiusKm}
-              onChange={(e) => setRadiusKm(Number(e.target.value) || 10)}
-              placeholder="Radius (km)"
-            />
-          </Field>
-        </div>
-      </Card>
+      <SectionTabs tabs={donationTabs} activeTab={activeTab} onTabChange={setActiveTab} />
 
-      <Card title="Live Location Status">
-        <Alert tone="info">{status}</Alert>
-        {error && <Alert tone="error" ariaLive="assertive">{error}</Alert>}
-        {fetching && <Alert tone="info">Searching for nearby NGOs...</Alert>}
-      </Card>
-
-      <Card title="Map View">
-        <div className="map-wrap" style={{ height: '480px', width: '100%', position: 'relative' }}>
-          <div ref={mapRef} style={{ width: '100%', height: '100%' }} />
-        </div>
-      </Card>
-
-      <Card title={`Nearby NGOs ${ngos.length > 0 ? `(${ngos.length} found)` : ''}`}>
-        {!fetching && ngos.length === 0 && (
-          <p className="empty-state">
-            {currentPosition
-              ? 'No NGOs found in the selected radius. Try increasing the radius.'
-              : 'Waiting for your location...'}
-          </p>
-        )}
-        {ngos.map((ngo) => (
-          <div
-            className="row"
-            key={ngo._id}
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-start',
-              padding: '14px 0',
-              borderBottom: '1px solid rgba(0,0,0,0.08)',
-              gap: '12px'
-            }}
-          >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', flex: 1 }}>
-              <strong style={{ fontSize: '1rem' }}>{ngo.name}</strong>
-              <span style={{ fontSize: '0.85rem', color: '#666' }}>{ngo.address}</span>
-              <span style={{ fontSize: '0.85rem', color: '#666' }}>📞 {ngo.phone}</span>
-              {ngo.openingHours && (
-                <span style={{ fontSize: '0.8rem', color: '#888' }}>🕐 {ngo.openingHours}</span>
-              )}
-              {ngo.website && (
-                <a
-                  href={ngo.website}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ fontSize: '0.82rem', color: '#2563eb' }}
-                >
-                  🌐 Website
-                </a>
-              )}
+      {activeTab === 'nearest' && (
+        <>
+          <Card title="Filter & Sort NGOs">
+            <div className="form-grid md:grid-cols-2">
+              <Field label="Maximum Distance (km)" htmlFor="ngo-radius">
+                <input
+                  id="ngo-radius"
+                  type="range"
+                  min="1"
+                  max="10"
+                  value={radius}
+                  onChange={(event) => setRadius(Number(event.target.value))}
+                />
+              </Field>
+              <Field label="Sort By" htmlFor="ngo-sort">
+                <select id="ngo-sort" value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
+                  <option value="distance">Distance</option>
+                  <option value="name">Name</option>
+                </select>
+              </Field>
             </div>
-            <Badge tone="success">{ngo.distanceKm} km away</Badge>
+          </Card>
+
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {filteredNgos.map((ngo) => (
+              <Card key={ngo.id} className="overflow-hidden">
+                <img src={ngo.imageUrl} alt={ngo.name} className="h-44 w-full rounded-[1.2rem] object-cover" />
+                <div className="mt-4 flex items-start justify-between gap-3">
+                  <h3 className="text-lg font-semibold text-ink">{ngo.name}</h3>
+                  <Badge tone="success">{ngo.distanceKm} km</Badge>
+                </div>
+                <p className="mt-2 text-sm leading-7 text-ink-muted">{ngo.description}</p>
+                <div className="mt-4 flex items-center gap-2 text-sm text-ink-muted">
+                  <PhoneCall size={14} />
+                  <span>{ngo.contact}</span>
+                </div>
+                <div className="mt-4 flex gap-3">
+                  <Button type="button">Donate Food</Button>
+                  <Button type="button" variant="secondary">View Details</Button>
+                </div>
+              </Card>
+            ))}
           </div>
-        ))}
-      </Card>
+        </>
+      )}
+
+      {activeTab === 'history' && (
+        <Card title="Donation History">
+          <div className="overflow-x-auto rounded-[1.25rem] border border-line/70">
+            <table className="min-w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-line bg-surface-muted/70">
+                  {['Date', 'NGO', 'Food Type', 'Quantity', 'Status'].map((header) => (
+                    <th key={header} className="whitespace-nowrap px-3 py-3 text-left font-semibold text-ink">{header}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {donationHistory.map((entry) => (
+                  <tr key={entry.id} className="border-b border-line/70 bg-surface/80">
+                    <td className="px-3 py-3 text-ink">{entry.date}</td>
+                    <td className="px-3 py-3 text-ink">{entry.ngo}</td>
+                    <td className="px-3 py-3 text-ink">{entry.foodType}</td>
+                    <td className="px-3 py-3 text-ink">{entry.quantity}</td>
+                    <td className="px-3 py-3"><Badge tone={entry.status === 'Delivered' ? 'success' : 'warning'}>{entry.status}</Badge></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+
+      {activeTab === 'map' && (
+        <Card toned title="Map View (Optional)">
+          <div className="rounded-[1.5rem] border border-line/70 bg-surface/80 p-5">
+            <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.2em] text-ink-muted">
+              <MapPinned size={16} />
+              Nearest NGOs Map
+            </div>
+            <p className="mt-3 text-sm leading-7 text-ink-muted">Interactive map showing nearest NGOs within your current radius filter.</p>
+            <div className="mt-4 h-[440px] overflow-hidden rounded-[1.2rem] border border-line/70">
+              <MapContainer center={mapCenter} zoom={12} scrollWheelZoom className="h-full w-full">
+                <TileLayer
+                  attribution="&copy; OpenStreetMap contributors"
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                {filteredNgos.map((ngo) => (
+                  <Marker key={ngo.id} position={[ngo.lat, ngo.lng]} icon={ngoIcon}>
+                    <Popup>
+                      <div className="min-w-[180px] text-sm">
+                        <p className="font-semibold text-ink">{ngo.name}</p>
+                        <p className="mt-1 text-ink-muted">{ngo.description}</p>
+                        <p className="mt-2 text-ink">Distance: {ngo.distanceKm} km</p>
+                        <p className="mt-1 text-ink-muted">Contact: {ngo.contact}</p>
+                      </div>
+                    </Popup>
+                  </Marker>
+                ))}
+              </MapContainer>
+            </div>
+            <div className="mt-4 grid gap-2">
+              {filteredNgos.map((ngo) => (
+                <div key={`map-list-${ngo.id}`} className="flex items-center justify-between rounded-[1rem] border border-line/70 bg-surface-muted/70 px-4 py-2 text-sm">
+                  <p className="font-medium text-ink">{ngo.name}</p>
+                  <div className="flex items-center gap-2 text-ink-muted"><LocateFixed size={14} />{ngo.distanceKm} km</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

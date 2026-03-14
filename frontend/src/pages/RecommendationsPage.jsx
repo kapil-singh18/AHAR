@@ -7,6 +7,7 @@ import Field from '../components/ui/Field';
 import PageHeader from '../components/ui/PageHeader';
 import Badge from '../components/ui/Badge';
 import { useLanguage } from '../i18n';
+import TranslatedText from '../components/TranslatedText';
 
 function RecommendationsPage() {
   const { t } = useLanguage();
@@ -79,9 +80,9 @@ function RecommendationsPage() {
             <input id="rec-prep" name="maxPrepTimeMin" type="number" value={form.maxPrepTimeMin} onChange={onChange} placeholder="e.g. 45" />
           </Field>
           <Field label="Exclude dishes with missing ingredients" htmlFor="rec-exclude">
-            <label className="row" style={{ gap: 12, alignItems: 'center' }}>
+            <label className="row">
               <input id="rec-exclude" name="excludeMissingIngredients" type="checkbox" checked={form.excludeMissingIngredients} onChange={onChange} />
-              <span>Only show fully-covered recipes</span>
+              <span><TranslatedText text="Only show fully-covered recipes" /></span>
             </label>
           </Field>
           <div className="form-action">
@@ -96,8 +97,8 @@ function RecommendationsPage() {
         <Card title={`${t('Recommendations')} (${recs.length})`}>
           {recs.length === 0 && <p className="empty-state">No recommendations matched your filters.</p>}
           {recs.map((rec) => (
-            <div key={rec.dishName} className="row" style={{ alignItems: 'center', gap: 12 }}>
-              <strong style={{ flex: 1 }}>{rec.dishName}</strong>
+            <div key={rec.dishName} className="row">
+              <strong className="flex-1">{rec.dishName}</strong>
               {rec.existsInMenu ? <Badge tone="success">In menu</Badge> : <Badge tone="neutral">Not in menu</Badge>}
               <Badge tone="neutral">Score: {Number(rec.score).toFixed(3)}</Badge>
               {Array.isArray(rec.missingIngredients) && rec.missingIngredients.length > 0 && (
