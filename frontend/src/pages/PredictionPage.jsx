@@ -195,9 +195,6 @@ function PredictionPage() {
           </div>
 
           <div className="form-grid mt-4">
-            <Field label="Expected People" htmlFor="pred-people">
-              <input id="pred-people" type="number" value={form.expectedPeople} onChange={(event) => setForm({ ...form, expectedPeople: event.target.value })} />
-            </Field>
             <Field label="Date & Time" htmlFor="pred-datetime">
               <input id="pred-datetime" type="datetime-local" value={form.dateTime} onChange={(event) => setForm({ ...form, dateTime: event.target.value })} />
             </Field>

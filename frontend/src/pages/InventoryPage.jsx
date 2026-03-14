@@ -60,15 +60,6 @@ function getEarliestBatchSummary(item) {
   };
 }
 
-function getTwoToFiveDayRange() {
-  const now = new Date();
-  const from = new Date(now);
-  const to = new Date(now);
-  from.setDate(now.getDate() + 2);
-  to.setDate(now.getDate() + 5);
-  return { from, to };
-}
-
 function getAutoExpiryDate() {
   const today = new Date();
   const dayOffset = Math.floor(Math.random() * 4) + 2; // 2 to 5 days ahead
@@ -156,6 +147,23 @@ const ITEM_IMAGES = {
   default: 'https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=800&q=60'
 };
 
+const CATEGORY_SHELF_LIFE_DAYS = {
+  Dairy: 7,
+  Produce: 5,
+  'Sauce Base': 10,
+  'Dry Goods': 180,
+  Protein: 2,
+  Bakery: 3,
+  Beverages: 7
+};
+
+function addDaysToIso(days) {
+  const today = new Date();
+  const expiryDate = new Date(today);
+  expiryDate.setDate(today.getDate() + days);
+  return expiryDate.toISOString().slice(0, 10);
+}
+
 function detectItemProfile(name) {
   const normalized = name.trim().toLowerCase();
   if (!normalized) return null;
@@ -163,15 +171,12 @@ function detectItemProfile(name) {
   for (const profile of DETECTION_PROFILES) {
     for (const keyword of profile.keywords) {
       if (normalized.includes(keyword.toLowerCase())) {
-        const today = new Date();
-        const expiryDate = new Date(today);
-        expiryDate.setDate(today.getDate() + profile.shelfLifeDays);
         return {
           category: profile.category,
           shelfLifeDays: profile.shelfLifeDays,
           storageClass: profile.storageClass,
           imageUrl: ITEM_IMAGES[profile.imageKey] || ITEM_IMAGES.default,
-          expiryDate: expiryDate.toISOString().slice(0, 10),
+          expiryDate: addDaysToIso(profile.shelfLifeDays),
           confidence: Math.floor(Math.random() * 7) + 92
         };
       }
@@ -196,8 +201,7 @@ function InventoryPage() {
     notes: ''
   });
   const [detection, setDetection] = useState({ detecting: false, result: null });
-
-  const expiryWindow = useMemo(() => getTwoToFiveDayRange(), []);
+  const [autoExpiryHint, setAutoExpiryHint] = useState({ source: 'profile', shelfLifeDays: 2 });
 
   const processedItems = useMemo(() => {
     return items.map((item) => {
@@ -291,6 +295,7 @@ function InventoryPage() {
       notes: ''
     });
     setDetection({ detecting: false, result: null });
+    setAutoExpiryHint({ source: 'profile', shelfLifeDays: 2 });
   };
 
   useEffect(() => {
@@ -302,18 +307,29 @@ function InventoryPage() {
     setDetection((prev) => ({ ...prev, detecting: true }));
     const timer = setTimeout(() => {
       const result = detectItemProfile(name);
+      const fallbackDays = CATEGORY_SHELF_LIFE_DAYS[newItemForm.category] || 2;
+      const nextExpiryDate = result ? addDaysToIso(result.shelfLifeDays) : addDaysToIso(fallbackDays);
       setDetection({ detecting: false, result });
+      setAutoExpiryHint({
+        source: result ? 'profile' : 'category',
+        shelfLifeDays: result ? result.shelfLifeDays : fallbackDays
+      });
       if (result) {
         setNewItemForm((prev) => ({
           ...prev,
           category: prev.category || result.category,
-          expiryDate: result.expiryDate,
+          expiryDate: nextExpiryDate,
           imageUrl: prev.imageUrl || result.imageUrl
+        }));
+      } else {
+        setNewItemForm((prev) => ({
+          ...prev,
+          expiryDate: nextExpiryDate
         }));
       }
     }, 850);
     return () => clearTimeout(timer);
-  }, [newItemForm.name]);
+  }, [newItemForm.name, newItemForm.category]);
 
   return (
     <div className="stack">
@@ -343,12 +359,6 @@ function InventoryPage() {
                 <p>
                   Earliest Expiring Quantity:{' '}
                   <span className="font-semibold text-ink">{item.earliestExpiringQuantity} of {item.totalQuantity} {item.unit}</span>
-                </p>
-                <p>
-                  Suggested Expiry Window (2-5 days ahead):{' '}
-                  <span className="font-semibold text-ink">
-                    {expiryWindow.from.toLocaleDateString('en-IN')} - {expiryWindow.to.toLocaleDateString('en-IN')}
-                  </span>
                 </p>
               </div>
               <div className="mt-4 h-2 rounded-full bg-surface-muted">
@@ -535,7 +545,15 @@ function InventoryPage() {
               {!detection.detecting && newItemForm.name.trim() && !detection.result && (
                 <div className="mt-4 flex items-center gap-3 rounded-[1rem] border border-amber-500/30 bg-amber-500/8 px-4 py-3 text-sm">
                   <Sparkles size={15} className="text-amber-500" />
-                  <span className="text-ink-muted">Item not recognized — please fill in category &amp; expiry manually.</span>
+                  <span className="text-ink-muted">Item not recognized. Expiry auto-calculated from selected category ({autoExpiryHint.shelfLifeDays} days shelf life).</span>
+                </div>
+              )}
+
+              {!detection.detecting && newItemForm.name.trim() && (
+                <div className="mt-4 rounded-[1rem] border border-line/60 bg-surface/80 px-4 py-3 text-sm text-ink-muted">
+                  Auto expiry set to{' '}
+                  <span className="font-semibold text-ink">{new Date(newItemForm.expiryDate).toLocaleDateString('en-IN')}</span>
+                  {' '}using {autoExpiryHint.source === 'profile' ? 'item profile model' : 'category defaults'} ({autoExpiryHint.shelfLifeDays} days).
                 </div>
               )}
 
