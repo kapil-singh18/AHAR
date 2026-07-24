@@ -19,7 +19,7 @@ const getWasteDashboard = async (req, res, next) => {
           totalConsumed: { $sum: '$consumed' },
           totalLeftover: { $sum: '$leftover' }
         }
-      },
+    },
       { $sort: { '_id.date': 1 } }
     ]);
 
