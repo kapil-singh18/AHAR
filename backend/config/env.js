@@ -1,4 +1,4 @@
-const requiredInProduction = ['MONGODB_URI'];
+const requiredInProduction = ['MONGODB_URI', 'CLERK_SECRET_KEY'];
 
 function toNumber(value, fallback) {
   const numeric = Number(value);

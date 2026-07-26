@@ -9,6 +9,7 @@
     "seed": "node scripts/seedDatabase.js"
   },
   "dependencies": {
+    "@clerk/express": "^2.1.46",
     "axios": "^1.7.9",
     "compression": "^1.8.0",
     "cors": "^2.8.5",

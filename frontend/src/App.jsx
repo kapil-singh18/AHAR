@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
-import { SignedIn, SignedOut, RedirectToSignIn } from '@clerk/clerk-react';
+import { SignedIn, SignedOut, RedirectToSignIn, useAuth } from '@clerk/clerk-react';
+import { setAuthTokenGetter } from './services/api';
 import Layout from './components/Layout';
 import DashboardPage from './pages/DashboardPage';
 import PredictionPage from './pages/PredictionPage';
@@ -12,6 +13,12 @@ import SignInPage from './pages/SignInPage';
 import SignUpPage from './pages/SignUpPage';
 
 function App() {
+  const { getToken } = useAuth();
+
+  useEffect(() => {
+    setAuthTokenGetter(getToken);
+  }, [getToken]);
+
   return (
     <>
       <SignedIn>

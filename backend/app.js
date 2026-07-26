@@ -6,6 +6,7 @@ const helmet = require('helmet');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 const mongoose = require('mongoose');
+const { clerkMiddleware, requireAuth } = require('@clerk/express');
 
 const predictionRoutes = require('./routes/predictionRoutes');
 const menuRoutes = require('./routes/menuRoutes');
@@ -54,6 +55,7 @@ app.use(compression());
 app.use(cors(corsOptions));
 app.use(express.json({ limit: env.jsonBodyLimit }));
 app.use(express.urlencoded({ extended: true }));
+app.use(clerkMiddleware());
 
 app.use(rateLimit({
   windowMs: env.rateLimitWindowMs,
@@ -97,13 +99,13 @@ app.get('/api/ready', (req, res) => {
   });
 });
 
-app.use('/api', predictionRoutes);
-app.use('/api/menu', menuRoutes);
-app.use('/api/inventory', inventoryRoutes);
-app.use('/api/consumption', consumptionRoutes);
-app.use('/api/analytics', analyticsRoutes);
-app.use('/api', imageRoutes);
-app.use('/api/donations', donationRoutes);
+app.use('/api', requireAuth(), predictionRoutes);
+app.use('/api/menu', requireAuth(), menuRoutes);
+app.use('/api/inventory', requireAuth(), inventoryRoutes);
+app.use('/api/consumption', requireAuth(), consumptionRoutes);
+app.use('/api/analytics', requireAuth(), analyticsRoutes);
+app.use('/api', requireAuth(), imageRoutes);
+app.use('/api/donations', requireAuth(), donationRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
