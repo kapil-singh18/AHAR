@@ -164,6 +164,20 @@ button { cursor: pointer; }
 .badge-error, .badge-danger { color:var(--error); border-color:var(--error); }
 .empty-state { border:1px dashed var(--border); padding:24px; text-align:center; color:var(--text-muted); font-size:13px; }
 .table-shell { overflow-x:auto; border:1px solid var(--border); }
+.range-actions { display:flex; gap:8px; }
+.range-button {
+  min-height:36px; border:1px solid var(--border); background:var(--surface);
+  color:var(--text-muted); padding:7px 11px; font-size:12px; font-weight:700;
+}
+.range-button.active { border-color:var(--primary); color:var(--primary); background:var(--app-bg); }
+.dashboard-visual-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.chart-wrap { width:100%; overflow-x:auto; }
+.line-chart { width:100%; min-width:420px; height:220px; }
+.chart-axis { stroke:var(--border); stroke-width:1; }
+.chart-label { fill:var(--text-muted); font-size:11px; }
+.chart-legend { display:flex; flex-wrap:wrap; gap:12px; color:var(--text-muted); font-size:11px; }
+.chart-legend span { display:inline-flex; align-items:center; gap:6px; }
+.chart-legend i { display:block; width:10px; height:3px; }
 .data-table { width:100%; border-collapse:collapse; font-size:12px; }
 .data-table th, .data-table td { border-bottom:1px solid var(--border); padding:10px 12px; text-align:left; }
 .data-table th { background:var(--app-bg); color:var(--text-muted); font-size:10px; text-transform:uppercase; }

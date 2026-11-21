@@ -75,7 +75,7 @@ const predictWaste = async (req, res, next) => {
       const { data } = await axios.post(
         modelUrl,
         { features },
-        { timeout: Number(process.env.ML_TIMEOUT_MS) || 5000 }
+        { timeout: Number(process.env.ML_TIMEOUT_MS) || 15000 }
       );
 
       const prediction = data?.prediction;
@@ -169,7 +169,15 @@ const predictDemand = async (req, res, next) => {
 
     const weatherMultiplier = weather && weather.toLowerCase().includes('rain') ? 1.05 : 1;
 
-    const demandModelUrl = process.env.ML_DEMAND_URL || 'http://localhost:5001/predict-demand';
+    const demandModelUrl = process.env.ML_DEMAND_URL
+      || (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5001/predict-demand');
+    if (!demandModelUrl) {
+      return res.status(503).json({
+        success: false,
+        message: 'Demand forecasting service is not configured. Please contact the administrator.',
+        ml: { source: 'ml-service', status: 'not-configured' }
+      });
+    }
     let predictedQuantity;
     let mlMeta;
     inferenceStatus = 'ml-service';
@@ -204,7 +212,7 @@ const predictDemand = async (req, res, next) => {
       const { data } = await axios.post(
         demandModelUrl,
         { features: demandFeatures },
-        { timeout: Number(process.env.ML_TIMEOUT_MS) || 5000 }
+        { timeout: Number(process.env.ML_TIMEOUT_MS) || 15000 }
       );
 
       const prediction = Number(data?.prediction);
@@ -321,7 +329,7 @@ const recommendDishes = async (req, res, next) => {
           maxPrepTimeMin,
           excludeMissingIngredients
         },
-        { timeout: Number(process.env.ML_TIMEOUT_MS) || 5000 }
+        { timeout: Number(process.env.ML_TIMEOUT_MS) || 15000 }
       );
 
       const recs = Array.isArray(data?.recommendations) ? data.recommendations : [];

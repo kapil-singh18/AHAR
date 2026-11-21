@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import Alert from '../components/ui/Alert';
 import Badge from '../components/ui/Badge';
@@ -21,6 +21,46 @@ function PredictionPage() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
   const [running, setRunning] = useState(false);
+  const [serviceStatus, setServiceStatus] = useState('checking');
+
+  useEffect(() => {
+    let active = true;
+    api.get('/ml/health')
+      .then(() => { if (active) setServiceStatus('available'); })
+      .catch(() => { if (active) setServiceStatus('unavailable'); });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    api.get('/consumption')
+      .then((response) => {
+        if (!active) return;
+        const logs = response.data?.data || [];
+        const daily = logs.reduce((totals, row) => {
+          if (!row.date) return totals;
+          const key = new Date(row.date).toISOString().slice(0, 10);
+          totals[key] = (totals[key] || 0) + Number(row.consumed || 0);
+          return totals;
+        }, {});
+        const dates = Object.entries(daily).sort(([left], [right]) => right.localeCompare(left));
+        const previous = dates[0];
+        const valid = dates.slice(0, 7);
+        const lastDayCustomers = previous ? previous[1] : undefined;
+        const last7DayAvg = valid.length
+          ? Number((valid.reduce((sum, [, consumed]) => sum + consumed, 0) / valid.length).toFixed(1))
+          : undefined;
+        if (lastDayCustomers !== undefined || last7DayAvg !== undefined) {
+          setForm((current) => ({
+            ...current,
+            lastDayCustomers: lastDayCustomers !== undefined ? String(lastDayCustomers) : current.lastDayCustomers,
+            last7DayAvg: last7DayAvg !== undefined ? String(last7DayAvg) : current.last7DayAvg
+          }));
+        }
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
 
   const update = (name, value) => setForm((current) => ({ ...current, [name]: value }));
 
@@ -55,6 +95,8 @@ function PredictionPage() {
   return (
     <div className="stack">
       <div className="page-head"><p className="eyebrow">AI Forecast</p><h1>Demand Forecasting</h1><p>Generate a demand prediction using the configured forecasting service.</p></div>
+      {serviceStatus === 'checking' && <Alert tone="info">Checking demand forecasting service availability...</Alert>}
+      {serviceStatus === 'unavailable' && <Alert tone="error">Demand forecasting service is currently unavailable. Please try again later.</Alert>}
       {error && <Alert tone="error">{error}</Alert>}
       <Card toned title="Forecast inputs">
         <form className="form-grid" onSubmit={run}>

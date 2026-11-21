@@ -7,6 +7,7 @@ const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 const mongoose = require('mongoose');
 const cookieParser = require('cookie-parser');
+const axios = require('axios');
 
 const predictionRoutes = require('./routes/predictionRoutes');
 const menuRoutes = require('./routes/menuRoutes');
@@ -100,6 +101,34 @@ app.get('/api/ready', (req, res) => {
     requestId: req?.requestId,
     database: isDbConnected ? 'connected' : 'disconnected',
     service: 'backend'
+  });
+
+  app.get('/api/ml/health', async (req, res) => {
+    const demandUrl = process.env.ML_DEMAND_URL;
+    if (!demandUrl) {
+      return res.status(503).json({
+        success: false,
+        status: 'not-configured',
+        message: 'Demand forecasting service is not configured.'
+      });
+    }
+
+    const healthUrl = process.env.ML_HEALTH_URL
+      || demandUrl.replace(/\/predict-demand\/?$/, '/health');
+    try {
+      const response = await axios.get(healthUrl, { timeout: Number(process.env.ML_TIMEOUT_MS) || 15000 });
+      return res.status(200).json({
+        success: true,
+        status: 'available',
+        data: response.data
+      });
+    } catch (error) {
+      return res.status(503).json({
+        success: false,
+        status: 'unavailable',
+        message: 'Demand forecasting service is currently unavailable.'
+      });
+    }
   });
 });
 

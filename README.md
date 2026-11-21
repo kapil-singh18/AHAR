@@ -17,6 +17,7 @@ Backend environment variables:
 - `TRUST_PROXY=true` on Render
 - `DEFAULT_KITCHEN_ID`
 - `ML_DEMAND_URL`
+- `ML_HEALTH_URL` (optional; inferred from `ML_DEMAND_URL` by default)
 - `ML_TIMEOUT_MS`
 
 Frontend environment variables:
