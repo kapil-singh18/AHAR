@@ -21,7 +21,7 @@ const getDishes = async (req, res, next) => {
 
 const getDishById = async (req, res, next) => {
   try {
-    const dish = await Dish.findById(req.params.id).populate('ingredients.ingredientId');
+    const dish = await Dish.findOne({ _id: req.params.id, kitchenId: req.kitchenId }).populate('ingredients.ingredientId');
     if (!dish) {
       return res.status(404).json({ success: false, message: 'Dish not found' });
     }
@@ -33,7 +33,7 @@ const getDishById = async (req, res, next) => {
 
 const updateDish = async (req, res, next) => {
   try {
-    const dish = await Dish.findByIdAndUpdate(req.params.id, req.body, {
+    const dish = await Dish.findOneAndUpdate({ _id: req.params.id, kitchenId: req.kitchenId }, req.body, {
       new: true,
       runValidators: true
     });
@@ -48,7 +48,7 @@ const updateDish = async (req, res, next) => {
 
 const deleteDish = async (req, res, next) => {
   try {
-    const dish = await Dish.findByIdAndDelete(req.params.id);
+    const dish = await Dish.findOneAndDelete({ _id: req.params.id, kitchenId: req.kitchenId });
     if (!dish) {
       return res.status(404).json({ success: false, message: 'Dish not found' });
     }

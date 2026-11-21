@@ -240,7 +240,7 @@ const getIngredients = async (req, res, next) => {
 
 const updateIngredient = async (req, res, next) => {
   try {
-    const ingredient = await Ingredient.findByIdAndUpdate(req.params.id, req.body, {
+    const ingredient = await Ingredient.findOneAndUpdate({ _id: req.params.id, kitchenId: req.kitchenId }, req.body, {
       new: true,
       runValidators: true
     });
@@ -261,7 +261,7 @@ const updateIngredient = async (req, res, next) => {
 
 const deleteIngredient = async (req, res, next) => {
   try {
-    const ingredient = await Ingredient.findByIdAndDelete(req.params.id);
+    const ingredient = await Ingredient.findOneAndDelete({ _id: req.params.id, kitchenId: req.kitchenId });
     if (!ingredient) {
       return res.status(404).json({ success: false, message: 'Ingredient not found' });
     }
@@ -343,7 +343,7 @@ const getPurchaseBatches = async (req, res, next) => {
 
 const getPurchaseBatch = async (req, res, next) => {
   try {
-    const batch = await PurchaseBatch.findById(req.params.id);
+    const batch = await PurchaseBatch.findOne({ _id: req.params.id, kitchenId: req.kitchenId });
     if (!batch) {
       return res.status(404).json({ success: false, message: 'Purchase batch not found' });
     }
@@ -356,7 +356,7 @@ const getPurchaseBatch = async (req, res, next) => {
 
 const updatePurchaseBatch = async (req, res, next) => {
   try {
-    const batch = await PurchaseBatch.findById(req.params.id);
+    const batch = await PurchaseBatch.findOne({ _id: req.params.id, kitchenId: req.kitchenId });
     if (!batch) {
       return res.status(404).json({ success: false, message: 'Purchase batch not found' });
     }
@@ -438,7 +438,7 @@ const updatePurchaseBatch = async (req, res, next) => {
 
 const deletePurchaseBatch = async (req, res, next) => {
   try {
-    const batch = await PurchaseBatch.findById(req.params.id);
+    const batch = await PurchaseBatch.findOne({ _id: req.params.id, kitchenId: req.kitchenId });
     if (!batch) {
       return res.status(404).json({ success: false, message: 'Purchase batch not found' });
     }

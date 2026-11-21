@@ -220,16 +220,22 @@ const predictDemand = async (req, res, next) => {
         inputColumns: data?.input_columns || []
       };
     } catch (mlError) {
-      inferenceStatus = 'fallback';
-      predictedQuantity = Math.round(
-        calculateBaseDemand(fallbackPastConsumption, derivedExpectedPeople) * eventMultiplier * weatherMultiplier
-      );
-      mlMeta = {
-        source: 'fallback',
-        model: 'formula',
-        externalModelUrl: demandModelUrl,
-        reason: mlError.message
-      };
+      logPredictionEvent('error', {
+        event: 'predict-demand',
+        requestId: req?.requestId,
+        kitchenId,
+        status: 'ml-service-unavailable',
+        message: mlError.message
+      });
+      return res.status(503).json({
+        success: false,
+        message: 'Demand forecasting service is currently unavailable. Please try again later.',
+        ml: {
+          source: 'ml-service',
+          status: 'unavailable',
+          externalModelUrl: demandModelUrl
+        }
+      });
     }
 
     const surplusRisk = predictedQuantity > derivedExpectedPeople * 1.15;

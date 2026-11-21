@@ -1,92 +1,51 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { useLocation } from 'react-router-dom';
-import { SignOutButton, useUser } from '@clerk/clerk-react';
-import { LogOut } from 'lucide-react';
-import LanguageSwitcher from './LanguageSwitcher';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { LogOut, Menu } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
+import { useAuth } from '../context/AuthContext';
 
 const pageTitles = [
-  { match: '/dashboard', title: 'Dashboard' },
-  { match: '/prediction', title: 'Prediction' },
-  { match: '/inventory', title: 'Inventory Hub' },
-  { match: '/donations', title: 'Donation Locator' },
-  { match: '/payment', title: 'Payment & Pricing' },
-  { match: '/pricing', title: 'Payment & Pricing' },
-  { match: '/guide', title: 'Guide' },
-  { match: '/', title: 'Dashboard' }
+  ['/overview', 'Overview'], ['/forecasting', 'Demand Forecasting'], ['/analytics', 'Analytics'],
+  ['/menu', 'Menu Management'], ['/inventory', 'Inventory'], ['/consumption', 'Consumption'],
+  ['/donations', 'Surpluses & Donations'], ['/settings', 'Settings']
 ];
 
 function AppHeader({ onMenuToggle }) {
-  const { user } = useUser();
   const location = useLocation();
-  const currentTitle = pageTitles.find((item) => location.pathname.startsWith(item.match))?.title || 'AHAR';
-  const initials = (user?.fullName || user?.primaryEmailAddress?.emailAddress || 'AH')
-    .split(' ')
-    .map((part) => part[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const title = pageTitles.find(([path]) => location.pathname.startsWith(path))?.[1] || 'AHAR';
+  const initials = (user?.name || user?.email || 'AH').split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/sign-in', { replace: true });
+  };
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between gap-4 rounded-[1.5rem] border border-line/70 bg-surface/85 px-4 py-4 shadow-soft backdrop-blur xl:px-6">
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={onMenuToggle}
-          className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-line/70 bg-surface-muted text-ink shadow-soft transition hover:-translate-y-0.5 lg:hidden"
-          aria-label="Open navigation"
-        >
-          <span className="block h-0.5 w-5 rounded-full bg-current" />
-          <span className="sr-only">Menu</span>
+    <header className="app-header">
+      <div className="header-title">
+        <button type="button" className="menu-toggle" onClick={onMenuToggle} aria-label="Open navigation">
+          <Menu size={20} />
         </button>
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-ink-muted">AHAR</p>
-          <h1 className="font-display text-2xl font-bold text-ink">{currentTitle}</h1>
+          <p className="header-breadcrumb">AHAR / Operations</p>
+          <h1>{title}</h1>
         </div>
       </div>
-
-      <div className="flex flex-wrap items-center justify-end gap-3">
-        <LanguageSwitcher compact />
+      <div className="header-actions">
         <ThemeToggle />
-        <Link
-          to="/sign-in"
-          className="inline-flex items-center rounded-full border border-line/70 bg-surface-muted px-4 py-2 text-sm font-semibold text-ink transition duration-200 hover:-translate-y-0.5"
-        >
-          Login
-        </Link>
-        <Link
-          to="/sign-up"
-          className="inline-flex items-center rounded-full bg-brand-orange px-4 py-2 text-sm font-semibold text-white shadow-soft transition duration-200 hover:-translate-y-0.5"
-        >
-          Register
-        </Link>
-        {user ? (
-          <>
-            <div className="flex items-center gap-3 rounded-full border border-line/70 bg-surface-muted px-2 py-2 shadow-soft">
-              {user.imageUrl ? (
-                <img src={user.imageUrl} alt={user.fullName || 'Profile'} className="h-10 w-10 rounded-full object-cover" />
-              ) : (
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-teal text-sm font-bold text-white">
-                  {initials}
-                </div>
-              )}
-              <div className="hidden min-w-0 sm:block">
-                <p className="truncate text-sm font-semibold text-ink">{user.fullName || 'Profile'}</p>
-                <p className="truncate text-xs text-ink-muted">{user.primaryEmailAddress?.emailAddress}</p>
-              </div>
-            </div>
-            <SignOutButton>
-              <button
-                type="button"
-                className="inline-flex items-center gap-2 rounded-full bg-brand-red px-4 py-2 text-sm font-semibold text-white shadow-soft transition duration-200 hover:-translate-y-0.5"
-              >
-                <LogOut size={16} />
-                <span>Logout</span>
-              </button>
-            </SignOutButton>
-          </>
-        ) : null}
+        <div className="account">
+          <div className="avatar">{initials}</div>
+          <div className="account-copy">
+            <strong>{user?.name || 'Account'}</strong>
+            <span>{user?.email}</span>
+          </div>
+        </div>
+        <button type="button" className="logout-button" onClick={handleLogout}>
+          <LogOut size={16} />
+          <span>Logout</span>
+        </button>
       </div>
     </header>
   );

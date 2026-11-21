@@ -21,8 +21,8 @@ function Layout({ children }) {
   }, [mobileOpen]);
 
   return (
-    <div className="min-h-screen bg-app px-4 py-4 text-ink sm:px-5 lg:px-6">
-      <div className="mx-auto flex max-w-[1600px] gap-4 xl:gap-6">
+    <div className="app-shell">
+      <div className="app-layout">
         <AppSidebar mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
         <div className="min-w-0 flex-1">
           <AppHeader onMenuToggle={() => setMobileOpen(true)} />

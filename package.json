@@ -10,7 +10,5 @@
   "author": "",
   "license": "ISC",
   "type": "commonjs",
-  "dependencies": {
-    "@clerk/express": "^2.1.46"
-  }
+  "dependencies": {}
 }

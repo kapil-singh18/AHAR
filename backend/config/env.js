@@ -1,4 +1,4 @@
-const requiredInProduction = ['MONGODB_URI', 'CLERK_SECRET_KEY'];
+const requiredInProduction = ['MONGODB_URI', 'JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET'];
 
 function toNumber(value, fallback) {
   const numeric = Number(value);
@@ -41,5 +41,12 @@ module.exports = {
   rateLimitMax: toNumber(process.env.RATE_LIMIT_MAX, 300),
   requestTimeoutMs: toNumber(process.env.REQUEST_TIMEOUT_MS, 20000),
   mongoUri: process.env.MONGODB_URI,
-  mongoUriFallback: process.env.MONGODB_URI_FALLBACK
+  mongoUriFallback: process.env.MONGODB_URI_FALLBACK,
+  jwtAccessSecret: process.env.JWT_ACCESS_SECRET || (process.env.NODE_ENV === 'production' ? undefined : 'development-only-ahare-access-secret'),
+  jwtRefreshSecret: process.env.JWT_REFRESH_SECRET || (process.env.NODE_ENV === 'production' ? undefined : 'development-only-ahare-refresh-secret'),
+  accessTokenTtl: process.env.JWT_ACCESS_TTL || '15m',
+  refreshTokenTtl: process.env.JWT_REFRESH_TTL || '7d',
+  refreshCookieName: process.env.REFRESH_COOKIE_NAME || 'ahar_refresh',
+  cookieSameSite: process.env.COOKIE_SAMESITE || (process.env.NODE_ENV === 'production' ? 'none' : 'lax'),
+  defaultKitchenId: process.env.DEFAULT_KITCHEN_ID || 'kitchen-nyc-001'
 };

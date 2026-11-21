@@ -6,7 +6,7 @@ const helmet = require('helmet');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 const mongoose = require('mongoose');
-const { clerkMiddleware, requireAuth } = require('@clerk/express');
+const cookieParser = require('cookie-parser');
 
 const predictionRoutes = require('./routes/predictionRoutes');
 const menuRoutes = require('./routes/menuRoutes');
@@ -15,9 +15,11 @@ const consumptionRoutes = require('./routes/consumptionRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes');
 const imageRoutes = require('./routes/imageRoutes');
 const donationRoutes = require('./routes/donationRoutes');
+const authRoutes = require('./routes/authRoutes');
 const env = require('./config/env');
 const notFound = require('./middleware/notFound');
 const errorHandler = require('./middleware/errorHandler');
+const { authenticate, scopeToActiveKitchen } = require('./middleware/authMiddleware');
 
 const app = express();
 
@@ -55,7 +57,7 @@ app.use(compression());
 app.use(cors(corsOptions));
 app.use(express.json({ limit: env.jsonBodyLimit }));
 app.use(express.urlencoded({ extended: true }));
-app.use(clerkMiddleware());
+app.use(cookieParser());
 
 app.use(rateLimit({
   windowMs: env.rateLimitWindowMs,
@@ -99,13 +101,14 @@ app.get('/api/ready', (req, res) => {
   });
 });
 
-app.use('/api', requireAuth(), predictionRoutes);
-app.use('/api/menu', requireAuth(), menuRoutes);
-app.use('/api/inventory', requireAuth(), inventoryRoutes);
-app.use('/api/consumption', requireAuth(), consumptionRoutes);
-app.use('/api/analytics', requireAuth(), analyticsRoutes);
-app.use('/api', requireAuth(), imageRoutes);
-app.use('/api/donations', requireAuth(), donationRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api', authenticate, scopeToActiveKitchen, predictionRoutes);
+app.use('/api/menu', authenticate, scopeToActiveKitchen, menuRoutes);
+app.use('/api/inventory', authenticate, scopeToActiveKitchen, inventoryRoutes);
+app.use('/api/consumption', authenticate, scopeToActiveKitchen, consumptionRoutes);
+app.use('/api/analytics', authenticate, scopeToActiveKitchen, analyticsRoutes);
+app.use('/api', authenticate, scopeToActiveKitchen, imageRoutes);
+app.use('/api/donations', authenticate, scopeToActiveKitchen, donationRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

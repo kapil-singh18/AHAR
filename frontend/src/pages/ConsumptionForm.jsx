@@ -7,7 +7,6 @@ import Field from '../components/ui/Field';
 import PageHeader from '../components/ui/PageHeader';
 
 function ConsumptionForm() {
-  const [kitchenId, setKitchenId] = useState('kitchen-nyc-001');
   const [dishId, setDishId] = useState('');
   const [cooked, setCooked] = useState('');
   const [consumed, setConsumed] = useState('');
@@ -17,8 +16,8 @@ function ConsumptionForm() {
 
   const load = async () => {
     const [dishRes, logRes] = await Promise.all([
-      api.get('/menu', { params: { kitchenId } }),
-      api.get('/consumption', { params: { kitchenId } })
+      api.get('/menu'),
+      api.get('/consumption')
     ]);
     setDishes(dishRes.data.data || []);
     setLogs(logRes.data.data || []);
@@ -31,7 +30,6 @@ function ConsumptionForm() {
   const submitLog = async (e) => {
     e.preventDefault();
     await api.post('/consumption', {
-      kitchenId,
       dishId,
       cooked: Number(cooked),
       consumed: Number(consumed),
@@ -52,9 +50,6 @@ function ConsumptionForm() {
       />
       <Card toned title="Log Consumption">
         <form className="form-grid" onSubmit={submitLog}>
-          <Field label="Kitchen ID" htmlFor="consumption-kitchen-id">
-            <input id="consumption-kitchen-id" value={kitchenId} onChange={(e) => setKitchenId(e.target.value)} placeholder="Kitchen ID" />
-          </Field>
           <Field label="Dish" htmlFor="dish-selector">
             <select id="dish-selector" value={dishId} onChange={(e) => setDishId(e.target.value)}>
               <option value="">Select Dish</option>

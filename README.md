@@ -1,5 +1,30 @@
 # Smart Food Waste Prediction & Kitchen Management SaaS
 
+## Authentication and deployment
+
+AHAR uses JWT access tokens and HttpOnly refresh cookies.
+
+Backend environment variables:
+
+- `MONGODB_URI`
+- `JWT_ACCESS_SECRET`
+- `JWT_REFRESH_SECRET`
+- `JWT_ACCESS_TTL` (default `15m`)
+- `JWT_REFRESH_TTL` (default `7d`)
+- `REFRESH_COOKIE_NAME` (default `ahar_refresh`)
+- `COOKIE_SAMESITE` (`lax` for local development; `none` for cross-origin Vercel/Render production)
+- `CORS_ORIGIN` (comma-separated exact frontend origins)
+- `TRUST_PROXY=true` on Render
+- `DEFAULT_KITCHEN_ID`
+- `ML_DEMAND_URL`
+- `ML_TIMEOUT_MS`
+
+Frontend environment variables:
+
+- `VITE_API_URL=https://<backend-host>/api`
+
+For Vercel to Render refresh cookies, set the backend cookie mode to `Secure=true` and `SameSite=None`, allow the exact Vercel origin in `CORS_ORIGIN`, and keep `withCredentials=true` in Axios. Do not use `CORS_ORIGIN=*` with credentials.
+
 ## Project Structure
 
 - `backend/` - Node.js, Express, MongoDB API (MVC)

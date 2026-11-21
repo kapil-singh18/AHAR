@@ -7,7 +7,6 @@ import PageHeader from '../components/ui/PageHeader';
 import Badge from '../components/ui/Badge';
 
 function MenuManagement() {
-  const [kitchenId, setKitchenId] = useState('kitchen-nyc-001');
   const [dishes, setDishes] = useState([]);
   const [form, setForm] = useState({
     name: '',
@@ -19,7 +18,7 @@ function MenuManagement() {
   });
 
   const loadDishes = async () => {
-    const res = await api.get('/menu', { params: { kitchenId } });
+    const res = await api.get('/menu');
     setDishes(res.data.data || []);
   };
 
@@ -30,7 +29,6 @@ function MenuManagement() {
   const onCreate = async (e) => {
     e.preventDefault();
     await api.post('/menu', {
-      kitchenId,
       name: form.name,
       ingredients: [
         {
@@ -55,9 +53,6 @@ function MenuManagement() {
       />
       <Card toned title="Add Dish">
         <form className="form-grid" onSubmit={onCreate}>
-          <Field label="Kitchen ID" htmlFor="menu-kitchen-id">
-            <input id="menu-kitchen-id" value={kitchenId} onChange={(e) => setKitchenId(e.target.value)} placeholder="Kitchen ID" />
-          </Field>
           <Field label="Dish name" htmlFor="dish-name">
             <input id="dish-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Dish Name" />
           </Field>
