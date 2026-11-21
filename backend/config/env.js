@@ -11,11 +11,23 @@ function toBoolean(value, fallback = false) {
 }
 
 function normalizeOrigins(value) {
-  if (!value || value === '*') return ['*'];
-  return String(value)
-    .split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean);
+  const origins = [
+    'https://ahar-rho.vercel.app',
+    'http://localhost:5173',
+    'http://127.0.0.1:5173'
+  ];
+
+  if (value) {
+    String(value)
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter((origin) => origin && origin !== '*')
+      .forEach((origin) => {
+        if (!origins.includes(origin)) origins.push(origin);
+      });
+  }
+
+  return origins;
 }
 
 function validateEnvironment() {
@@ -47,6 +59,8 @@ module.exports = {
   accessTokenTtl: process.env.JWT_ACCESS_TTL || '15m',
   refreshTokenTtl: process.env.JWT_REFRESH_TTL || '7d',
   refreshCookieName: process.env.REFRESH_COOKIE_NAME || 'ahar_refresh',
-  cookieSameSite: process.env.COOKIE_SAMESITE || (process.env.NODE_ENV === 'production' ? 'none' : 'lax'),
+  cookieSameSite: process.env.NODE_ENV === 'production'
+    ? 'none'
+    : (String(process.env.COOKIE_SAMESITE || 'lax').toLowerCase() === 'strict' ? 'strict' : 'lax'),
   defaultKitchenId: process.env.DEFAULT_KITCHEN_ID || 'kitchen-nyc-001'
 };

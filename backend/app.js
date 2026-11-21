@@ -43,18 +43,20 @@ morgan.token('request-id', (req) => req.requestId || '-');
 
 const corsOptions = {
   credentials: true,
+  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id'],
   origin(origin, callback) {
-    if (!origin || env.corsOrigins.includes('*') || env.corsOrigins.includes(origin)) {
+    if (!origin || env.corsOrigins.includes(origin)) {
       callback(null, true);
       return;
     }
-    callback(new Error(`CORS blocked for origin: ${origin}`));
+    callback(null, false);
   }
 };
 
+app.use(cors(corsOptions));
 app.use(helmet());
 app.use(compression());
-app.use(cors(corsOptions));
 app.use(express.json({ limit: env.jsonBodyLimit }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());

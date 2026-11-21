@@ -21,7 +21,7 @@ Backend environment variables:
 
 Frontend environment variables:
 
-- `VITE_API_URL=https://<backend-host>/api`
+- `VITE_API_URL=https://ahar-1.onrender.com/api`
 
 For Vercel to Render refresh cookies, set the backend cookie mode to `Secure=true` and `SameSite=None`, allow the exact Vercel origin in `CORS_ORIGIN`, and keep `withCredentials=true` in Axios. Do not use `CORS_ORIGIN=*` with credentials.
 
